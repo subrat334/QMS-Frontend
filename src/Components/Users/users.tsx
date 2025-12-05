@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Pencil,
-  Trash2,
+  // Trash2,
   UserPlus,
   UserCog,
   Eye,
@@ -110,7 +110,12 @@ const Users: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editUserId, setEditUserId] = useState<string | null>(null);
   const [passwordEditMode, setPasswordEditMode] = useState(false);
-  const [passwordEditUserId, setPasswordEditUserId] = useState<string | null>(null);
+  const [passwordEditUserId, setPasswordEditUserId] = useState<string | null>(
+    null
+  );
+  const [passwordEditUserName, setPasswordEditUserName] = useState<string | null>(
+    null
+  );
 
   // -------------------- Loaders --------------------
   const loadUsers = async () => {
@@ -441,17 +446,17 @@ const isCreateFormValid = (() => {
   };
 
   // -------------------- Delete user --------------------
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm("Are you sure to delete this user?")) return;
-    try {
-      await API.deleteUserPrivilege(userId);
-      toast.success("User deleted");
-      await loadUsers();
-    } catch (err) {
-      console.error("deleteUser:", err);
-      toast.error("Failed to delete user");
-    }
-  };
+  // const handleDeleteUser = async (userId: string) => {
+  //   if (!confirm("Are you sure to delete this user?")) return;
+  //   try {
+  //     await API.deleteUserPrivilege(userId);
+  //     toast.success("User deleted");
+  //     await loadUsers();
+  //   } catch (err) {
+  //     console.error("deleteUser:", err);
+  //     toast.error("Failed to delete user");
+  //   }
+  // };
 
   // -------------------- Edit / Prefill privileges --------------------
   const openEditPrivileges = async (userId: string) => {
@@ -536,9 +541,10 @@ const isCreateFormValid = (() => {
   };
 
   // -------------------- Password editor --------------------
-  const openPasswordEditor = (userId: string) => {
+  const openPasswordEditor = (userId: string, userName: string) => {
     setPasswordEditMode(true);
     setPasswordEditUserId(userId);
+    setPasswordEditUserName(userName);
     // clear other edit fields
     setEditUserId(null);
     setName("");
@@ -601,6 +607,15 @@ const isCreateFormValid = (() => {
     setEmployeeId(value);
   };
 
+
+
+const isPasswordValid =
+  password.trim().length > 0 &&
+  confirmPassword.trim().length > 0 &&
+  password === confirmPassword;
+
+
+
   // -------------------- Render --------------------
   return (
     <div className="p-6 w-full">
@@ -616,6 +631,14 @@ const isCreateFormValid = (() => {
       <div className="bg-white rounded-lg shadow-md p-6 mb-6 border border-green-100">
         {passwordEditMode ? (
           <>
+          {passwordEditUserName && (
+        <p className="mb-2 text-green-800">
+          <span className="font-bold">Name :</span>{" "}
+          <span className="font-semibold">{passwordEditUserName}</span>
+        </p>
+      )}
+
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block mb-1 font-medium text-green-800">Password</label>
@@ -659,15 +682,19 @@ const isCreateFormValid = (() => {
             </div>
 
             <div className="mt-4 flex gap-3">
-              <button
-                onClick={handleUpdatePasswordConfirm}
-                className="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800"
-              >
-                Update Password
-              </button>
+               <button
+          onClick={handleUpdatePasswordConfirm}
+          disabled={!isPasswordValid || !passwordEditUserId}
+          className={`px-4 py-2 rounded text-white 
+            ${isPasswordValid ? "bg-green-700 hover:bg-green-800" : "bg-green-300 cursor-not-allowed"}
+          `}
+        >
+          Update Password
+        </button>
+
 
               <button
-                onClick={() => { setPasswordEditMode(false); setPasswordEditUserId(null); setPassword(""); setConfirmPassword(""); setPasswordError(""); }}
+                onClick={() => { setPasswordEditMode(false); setPasswordEditUserId(null); setPasswordEditUserName(null); setPassword(""); setConfirmPassword(""); setPasswordError(""); }}
                 className="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200"
               >
                 Cancel
@@ -953,12 +980,12 @@ const isCreateFormValid = (() => {
                     <Pencil size={18} />
                   </button>
 
-                  <button
+                  {/* <button
                     onClick={() => handleDeleteUser(u.UserId)}
                     className="p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-all duration-200"
                   >
                     <Trash2 size={18} />
-                  </button>
+                  </button> */}
                 </div>
 
                 {/* Center Content (avatar + name + type) */}
@@ -997,7 +1024,7 @@ const isCreateFormValid = (() => {
                   {/* Update Password bottom-right */}
                   <div className="mt-4 flex justify-end w-full">
                     <span
-                      onClick={() => openPasswordEditor(u.UserId)}
+                      onClick={() => openPasswordEditor(u.UserId,u.Name)}
                       className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer underline"
                     >
                       Update Password

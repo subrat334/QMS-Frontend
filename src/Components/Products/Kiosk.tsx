@@ -1140,10 +1140,10 @@ const Kiosk = () => {
       return;
     }
 
-    if (!selectedCard.counters?.length) {
-      toast.error("No counters assigned to this subcategory");
-      return;
-    }
+    // if (!selectedCard.counters?.length) {
+    //   toast.error("No counters assigned to this subcategory");
+    //   return;
+    // }
 
     // setLoadingToken(true);
 
