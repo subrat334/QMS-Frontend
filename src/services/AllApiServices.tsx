@@ -174,6 +174,18 @@ getCountersBySubCategoryId: (subCatId: number) =>
 updateUserPassword: (userId: string, password: string) =>
   api.post(`/Account/UpdatePassword?UserId=${userId}&password=${password}`),
 
+// -------------------------------------------------------
+// DISPLAY / MONITOR
+// -------------------------------------------------------
+getDisplayScreenByCategoryAndSubCategory: (
+  categoryId: number,
+  subCategoryId: number
+) =>
+  api.get(
+    `/Display/screen?categoryId=${categoryId}&subCategoryId=${subCategoryId}`
+  ),
+
+
  
 };
 

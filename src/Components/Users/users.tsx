@@ -615,6 +615,10 @@ const isPasswordValid =
   password === confirmPassword;
 
 
+  const isEditMode = !!editUserId;
+
+
+
 
   // -------------------- Render --------------------
   return (
@@ -708,81 +712,105 @@ const isPasswordValid =
               <div>
                 <label className="block mb-1 font-medium text-green-800">Name</label>
                 <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => handleNameChange(e.target.value)}
-                  placeholder="Enter name"
-                  autoComplete="off"
-                  spellCheck={false}
-                  className="w-full border border-green-200 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500"
-                />
+  type="text"
+  value={name}
+  disabled={isEditMode}
+  onChange={(e) => handleNameChange(e.target.value)}
+  placeholder="Enter name"
+  className={`w-full border rounded-md px-3 py-2 focus:ring-2 
+    ${isEditMode ? "bg-gray-100 cursor-not-allowed" : "border-green-200 focus:ring-green-500"}
+  `}
+/>
+
               </div>
 
               {/* Employee ID */}
               <div>
                 <label className="block mb-1 font-medium text-green-800">Employee ID</label>
-                <input
-                  type="text"
-                  value={employeeId}
-                  onChange={(e) => handleEmployeeIdChange(e.target.value)}
-                  placeholder="Enter employee id"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                  className="w-full border border-green-200 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500"
-                />
+               <input
+  type="text"
+  value={employeeId}
+  disabled={isEditMode}
+  onChange={(e) => handleEmployeeIdChange(e.target.value)}
+  placeholder="Enter employee id"
+  className={`w-full border rounded-md px-3 py-2 focus:ring-2 
+    ${isEditMode ? "bg-gray-100 cursor-not-allowed" : "border-green-200 focus:ring-green-500"}
+  `}
+/>
+
               </div>
 
-              {/* Password */}
-              <div>
-                <label className="block mb-1 font-medium text-green-800">Password</label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => { setPassword(e.target.value); setPasswordError(""); }}
-                    placeholder="Enter password"
-                    autoComplete="new-password"
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck={false}
-                    className="w-full border border-green-200 rounded-md px-3 py-2 pr-10 focus:ring-2 focus:ring-green-500"
-                  />
-                  <span
-                    className="absolute right-3 top-3 cursor-pointer text-green-700"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </span>
-                </div>
-              </div>
+            {/* Password & Confirm Password - HIDE IN EDIT MODE */}
+{!isEditMode && (
+  <>
+    {/* Password */}
+    <div>
+      <label className="block mb-1 font-medium text-green-800">Password</label>
+      <div className="relative">
+        <input
+          type={showPassword ? "text" : "password"}
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setPasswordError("");
+          }}
+          placeholder="Enter password"
+          autoComplete="new-password"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          className="w-full border border-green-200 rounded-md px-3 py-2 pr-10 focus:ring-2 focus:ring-green-500"
+        />
+        <span
+          className="absolute right-3 top-3 cursor-pointer text-green-700"
+          onClick={() => setShowPassword(!showPassword)}
+        >
+          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+        </span>
+      </div>
+    </div>
 
-              {/* Confirm Password */}
-              <div>
-                <label className="block mb-1 font-medium text-green-800">Confirm Password</label>
-                <div className="relative">
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    value={confirmPassword}
-                    onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(""); }}
-                    placeholder="Re-enter password"
-                    autoComplete="new-password"
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck={false}
-                    className="w-full border border-green-200 rounded-md px-3 py-2 pr-10 focus:ring-2 focus:ring-green-500"
-                  />
-                  <span
-                    className="absolute right-3 top-3 cursor-pointer text-green-700"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  >
-                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </span>
-                </div>
+    {/* Confirm Password */}
+    <div>
+      <label className="block mb-1 font-medium text-green-800">
+        Confirm Password
+      </label>
+      <div className="relative">
+        <input
+          type={showConfirmPassword ? "text" : "password"}
+          value={confirmPassword}
+          onChange={(e) => {
+            setConfirmPassword(e.target.value);
+            setPasswordError("");
+          }}
+          placeholder="Re-enter password"
+          autoComplete="new-password"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          className="w-full border border-green-200 rounded-md px-3 py-2 pr-10 focus:ring-2 focus:ring-green-500"
+        />
+        <span
+          className="absolute right-3 top-3 cursor-pointer text-green-700"
+          onClick={() =>
+            setShowConfirmPassword(!showConfirmPassword)
+          }
+        >
+          {showConfirmPassword ? (
+            <EyeOff size={18} />
+          ) : (
+            <Eye size={18} />
+          )}
+        </span>
+      </div>
 
-                {passwordError && <p className="text-red-600 mt-1">{passwordError}</p>}
-              </div>
+      {passwordError && (
+        <p className="text-red-600 mt-1">{passwordError}</p>
+      )}
+    </div>
+  </>
+)}
+
 
               {/* Designation */}
               <div>
