@@ -173,6 +173,33 @@ getCountersBySubCategoryId: (subCatId: number) =>
 
 updateUserPassword: (userId: string, password: string) =>
   api.post(`/Account/UpdatePassword?UserId=${userId}&password=${password}`),
+// getTokensByFilter: (
+//   categoryId: string,
+//   subcategoryId: string,
+//   pageIndex: number = 1,
+//   pageSize: number = 20
+// ) =>
+//   api.get(
+//     `/Counter/GetPagedTokens?categoryId=${encodeURIComponent(
+//       categoryId
+//     )}&subCategoryId=${encodeURIComponent(
+//       subcategoryId
+//     )}&pageIndex=${pageIndex}&pageSize=${pageSize}`
+//   ),
+
+getTokensByFilter: (
+  categoryId: string,
+  subcategoryId: string,
+  pageIndex: number = 1,
+  pageSize: number = 20
+) =>
+  api.get(
+    `/Counter/GetPagedTokens?categoryId=${encodeURIComponent(
+      categoryId
+    )}&subCategoryId=${encodeURIComponent(
+      subcategoryId
+    )}&pageIndex=${pageIndex}&pageSize=${pageSize}`
+  ),
 
 // -------------------------------------------------------
 // DISPLAY / MONITOR
@@ -186,7 +213,18 @@ getDisplayScreenByCategoryAndSubCategory: (
   ),
 
 
- 
+
+// NEW STATUS UPDATE API
+// -------------------------------------------------------
+updateTokenStatus: (data: {
+  CategoryId: number;
+  SubCategoryId: number;
+  CounterId: number;
+  Token: string;
+  StatusId: number;
+  Remarks: string;
+}) => api.post("/Counter/AddTokenVisitDetails", data),
+
 };
 
 // import api from "./api";
