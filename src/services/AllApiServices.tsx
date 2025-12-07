@@ -190,14 +190,17 @@ updateUserPassword: (userId: string, password: string) =>
 getTokensByFilter: (
   categoryId: string,
   subcategoryId: string,
+  counterId: string,
   pageIndex: number = 1,
-  pageSize: number = 20
+  pageSize: number = 50
 ) =>
   api.get(
     `/Counter/GetPagedTokens?categoryId=${encodeURIComponent(
       categoryId
     )}&subCategoryId=${encodeURIComponent(
       subcategoryId
+    )}&counterId=${encodeURIComponent(
+      counterId
     )}&pageIndex=${pageIndex}&pageSize=${pageSize}`
   ),
 

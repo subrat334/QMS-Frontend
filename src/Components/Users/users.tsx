@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Pencil,
-  // Trash2,
+  Trash2,
   UserPlus,
   UserCog,
   Eye,
@@ -446,17 +446,17 @@ const isCreateFormValid = (() => {
   };
 
   // -------------------- Delete user --------------------
-  // const handleDeleteUser = async (userId: string) => {
-  //   if (!confirm("Are you sure to delete this user?")) return;
-  //   try {
-  //     await API.deleteUserPrivilege(userId);
-  //     toast.success("User deleted");
-  //     await loadUsers();
-  //   } catch (err) {
-  //     console.error("deleteUser:", err);
-  //     toast.error("Failed to delete user");
-  //   }
-  // };
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm("Are you sure to delete this user?")) return;
+    try {
+      await API.deleteUserPrivilege(userId);
+      toast.success("User deleted");
+      await loadUsers();
+    } catch (err) {
+      console.error("deleteUser:", err);
+      toast.error("Failed to delete user");
+    }
+  };
 
   // -------------------- Edit / Prefill privileges --------------------
   const openEditPrivileges = async (userId: string) => {
@@ -1008,12 +1008,12 @@ const isPasswordValid =
                     <Pencil size={18} />
                   </button>
 
-                  {/* <button
+                  <button
                     onClick={() => handleDeleteUser(u.UserId)}
                     className="p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-all duration-200"
                   >
                     <Trash2 size={18} />
-                  </button> */}
+                  </button>
                 </div>
 
                 {/* Center Content (avatar + name + type) */}

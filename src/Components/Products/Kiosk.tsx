@@ -1278,9 +1278,19 @@ const Kiosk = () => {
               ✕
             </button>
 
-            <h2 className="text-2xl font-bold text-green-700 mb-4 text-center">
-              {selectedCard?.name || "Enter Number"}
-            </h2>
+<h2 className="mb-4">
+  {/* Name - Center */}
+  <div className="text-2xl font-bold text-green-700 text-center">
+    {selectedCard?.name || " "}
+  </div>
+
+  {/* Mobile Number - Force Left */}
+  <div className="w-full text-sm text-gray-500 text-left">
+    Enter Mobile Number
+  </div>
+</h2>
+
+
 
             <div
               className="w-full bg-gray-100 border text-center text-4xl font-semibold rounded-2xl py-4 mb-6 cursor-text relative"
