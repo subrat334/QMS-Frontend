@@ -4,6 +4,7 @@ import { API } from "../../services/AllApiServices";
 interface TokenData {
   status: string;
   tokenNumber: string;
+  CounterName: string;
   counterNumber: number | null;
 }
 
@@ -138,7 +139,7 @@ const Monitor: React.FC<MonitorProps> = ({ fullScreen, setFullScreen }) => {
             screen?.DisplayList?.map((item: any) => ({
               status: item.Status,
               tokenNumber: item.Token,
-              counterNumber: item.CounterId,
+              CounterName: item.CounterName,
             })) || [];
         } catch (err) {
           console.error("API Error:", err);
@@ -193,7 +194,7 @@ const Monitor: React.FC<MonitorProps> = ({ fullScreen, setFullScreen }) => {
       <tr key={i} className="border-b border-green-100 text-center">
         <td className="p-2 text-center">{token.status}</td>
         <td className="p-2 font-bold text-center">{token.tokenNumber}</td>
-        <td className="p-2 text-center">{token.counterNumber ?? "-"}</td>
+        <td className="p-2 text-center">{token.CounterName ?? "-"}</td>
       </tr>
     ))}
   </tbody>
