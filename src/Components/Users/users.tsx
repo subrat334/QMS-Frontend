@@ -814,7 +814,7 @@ const isPasswordValid =
 
               {/* Designation */}
               <div>
-                <label className="block mb-1 font-medium text-green-800">Designation</label>
+                <label className="block mb-1 font-medium text-green-800">User Type</label>
                 <select
   value={designation}
   onChange={(e) => {
@@ -1008,12 +1008,21 @@ const isPasswordValid =
                     <Pencil size={18} />
                   </button>
 
-                  <button
+                  {/* <button
                     onClick={() => handleDeleteUser(u.UserId)}
                     className="p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-all duration-200"
                   >
                     <Trash2 size={18} />
-                  </button>
+                  </button> */}
+                  {u.UserType !== "SuperAdmin" && (
+                    <button
+                      onClick={() => handleDeleteUser(u.UserId)}
+                      className="p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-all duration-200"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
+
                 </div>
 
                 {/* Center Content (avatar + name + type) */}

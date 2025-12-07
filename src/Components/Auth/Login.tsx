@@ -75,7 +75,7 @@ const Login = () => {
         </div>
 
         <h2 className="text-3xl font-semibold text-center text-green-700">
-          Utkal Hospital Admin
+          Utkal Health Care Pvt. Ltd.
         </h2>
 
         {/* Username */}
@@ -130,12 +130,12 @@ const Login = () => {
           {loading ? "Logging in..." : "Login"}
         </button>
 
-        <p className="text-center text-gray-600">
+        {/* <p className="text-center text-gray-600">
           Forgot Password?{" "}
           <Link to="/register" className="text-green-700 hover:underline">
             Click Here
           </Link>
-        </p>
+        </p> */}
       </form>
     </div>
   );

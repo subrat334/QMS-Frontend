@@ -166,13 +166,14 @@ const Monitor: React.FC<MonitorProps> = ({ fullScreen, setFullScreen }) => {
           isFullScreen ? "w-full h-full" : "w-64"
         } border-2 border-green-300 flex flex-col`}
       >
-        <h2
-          className={`font-bold text-green-800 mb-3 border-b-2 border-green-200 bg-green-50 rounded-t-2xl ${
-            isFullScreen ? "text-2xl p-4" : "text-lg p-3"
-          }`}
-        >
-          {subcategory}
-        </h2>
+       <h2
+  className={`font-bold text-green-800 mb-3 border-b-2 border-green-200 bg-green-50 rounded-t-2xl text-center ${
+    isFullScreen ? "text-2xl p-4" : "text-lg p-3"
+  }`}
+>
+  {subcategory}
+</h2>
+
 
         <div className={`flex-1 overflow-auto p-2 ${isFullScreen ? "text-xl" : "text-sm"}`}>
           {tokens.length === 0 ? (
