@@ -726,7 +726,7 @@ const isPasswordValid =
 
               {/* Employee ID */}
               <div>
-                <label className="block mb-1 font-medium text-green-800">Employee ID</label>
+                <label className="block mb-1 font-medium text-green-800">Employee ID/User Name</label>
                <input
   type="text"
   value={employeeId}
