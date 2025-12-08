@@ -245,7 +245,7 @@ interface SubcategoryType {
 
 interface TokenConfig {
   prefix: string;
-  suffix: string;
+  // suffix: string;
   initializeNumber: string;
   consecutiveBasis: ConsecutiveBasisType;
 }
@@ -259,7 +259,7 @@ const ConfigureTokens = () => {
 
   const [config, setConfig] = useState<TokenConfig>({
     prefix: "",
-    suffix: "",
+    // suffix: "",
     initializeNumber: "1",
     consecutiveBasis: CONSECUTIVE_BASIS.DAILY,
   });
@@ -311,7 +311,7 @@ const ConfigureTokens = () => {
       Prefix: config.prefix,
       InitializeNo: config.initializeNumber,
       // CurrentNo: config.initializeNumber,
-      ResetType: config.consecutiveBasis,
+      ResetTypeId: config.consecutiveBasis,
       // LastResetDate: new Date().toISOString(),
     };
 
@@ -323,7 +323,7 @@ const ConfigureTokens = () => {
       // 🔥 RESET ALL FIELDS AFTER SAVE
       setConfig({
         prefix: "",
-        suffix: "",
+        // suffix: "",
         initializeNumber: "1",
         consecutiveBasis: CONSECUTIVE_BASIS.DAILY,
       });
@@ -388,7 +388,7 @@ const ConfigureTokens = () => {
               Token Configuration
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Prefix */}
               <div className="flex flex-col">
                 <label className="text-sm font-medium text-green-800 mb-1">Prefix</label>
@@ -401,7 +401,7 @@ const ConfigureTokens = () => {
               </div>
 
               {/* Suffix */}
-              <div className="flex flex-col">
+              {/* <div className="flex flex-col">
                 <label className="text-sm font-medium text-green-800 mb-1">Suffix</label>
                 <input
                   type="text"
@@ -409,7 +409,7 @@ const ConfigureTokens = () => {
                   onChange={(e) => setConfig({ ...config, suffix: e.target.value })}
                   className="border border-green-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all shadow-sm"
                 />
-              </div>
+              </div> */}
 
               {/* Initialize Number */}
               <div className="flex flex-col">

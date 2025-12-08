@@ -128,7 +128,7 @@ export const API = {
     Prefix: string;
     InitializeNo: string;
     // CurrentNo: string;
-    ResetType: number;
+    ResetTypeId: number;
     // LastResetDate: string;
   }) => api.post("/Account/TokenPrefix/Create", data),
 
