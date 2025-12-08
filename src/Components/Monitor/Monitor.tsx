@@ -31,51 +31,94 @@ const Monitor: React.FC<MonitorProps> = ({ fullScreen, setFullScreen }) => {
   const [loadingCategories, setLoadingCategories] = useState(true);
 
   /* ✅ LOAD CATEGORIES FROM LOCAL STORAGE */
+  // useEffect(() => {
+  //   const loadCategories = () => {
+  //     const stored = localStorage.getItem("UserPrivileges");
+
+  //     if (!stored) {
+  //       setCategoryData({});
+  //       setLoadingCategories(false);
+  //       return;
+  //     }
+
+  //     const parsed = JSON.parse(stored);
+
+  //     const mapped: CategoryData = parsed.categories?.reduce(
+  //       (acc: CategoryData, cat: any) => {
+  //         acc[cat.CategoryName] = {
+  //           categoryId: Number(cat.CategoryId),
+  //           subCategories:
+  //             cat.SubCategories?.map((s: any) => ({
+  //               name: s.SubCategoryName,
+  //               subCategoryId: Number(s.SubCategoryId),
+  //             })) || [],
+  //         };
+  //         return acc;
+  //       },
+  //       {}
+  //     );
+
+  //     setCategoryData(mapped || {});
+  //     setLoadingCategories(false);
+  //   };
+
+  //   // ✅ Load immediately
+  //   loadCategories();
+
+  //   // ✅ Poll every 500ms until data appears
+  //   const interval = setInterval(() => {
+  //     const stored = localStorage.getItem("UserPrivileges");
+  //     if (stored) {
+  //       loadCategories();
+  //       clearInterval(interval); // Stop polling once loaded
+  //     }
+  //   }, 500);
+
+  //   return () => clearInterval(interval);
+  // }, []);
+
+    /* ✅ LOAD CATEGORIES FROM API (NOT LOCAL STORAGE) */
   useEffect(() => {
-    const loadCategories = () => {
-      const stored = localStorage.getItem("UserPrivileges");
+    const loadCategories = async () => {
+      try {
+        setLoadingCategories(true);
 
-      if (!stored) {
+        const user = JSON.parse(localStorage.getItem("AppUser") || "{}");
+        if (!user?.id) {
+          setCategoryData({});
+          return;
+        }
+
+        const res = await API.getUserPrivilegesById(user.id);
+        const categories = res.data?.Categories || [];
+
+        const mapped: CategoryData = categories.reduce(
+          (acc: CategoryData, cat: any) => {
+            acc[cat.CategoryName] = {
+              categoryId: Number(cat.CategoryId),
+              subCategories:
+                cat.SubCategories?.map((s: any) => ({
+                  name: s.SubCategoryName,
+                  subCategoryId: Number(s.SubCategoryId),
+                })) || [],
+            };
+            return acc;
+          },
+          {}
+        );
+
+        setCategoryData(mapped);
+      } catch (err) {
+        console.error("Failed to load categories:", err);
         setCategoryData({});
+      } finally {
         setLoadingCategories(false);
-        return;
       }
-
-      const parsed = JSON.parse(stored);
-
-      const mapped: CategoryData = parsed.categories?.reduce(
-        (acc: CategoryData, cat: any) => {
-          acc[cat.CategoryName] = {
-            categoryId: Number(cat.CategoryId),
-            subCategories:
-              cat.SubCategories?.map((s: any) => ({
-                name: s.SubCategoryName,
-                subCategoryId: Number(s.SubCategoryId),
-              })) || [],
-          };
-          return acc;
-        },
-        {}
-      );
-
-      setCategoryData(mapped || {});
-      setLoadingCategories(false);
     };
 
-    // ✅ Load immediately
     loadCategories();
-
-    // ✅ Poll every 500ms until data appears
-    const interval = setInterval(() => {
-      const stored = localStorage.getItem("UserPrivileges");
-      if (stored) {
-        loadCategories();
-        clearInterval(interval); // Stop polling once loaded
-      }
-    }, 500);
-
-    return () => clearInterval(interval);
   }, []);
+
 
   /* ✅ ESC FULLSCREEN */
   useEffect(() => {

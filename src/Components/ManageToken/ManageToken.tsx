@@ -1200,7 +1200,7 @@ const ManageTokens = () => {
   const [loadingTokens, setLoadingTokens] = useState(false);
   const [loadingPrivileges, setLoadingPrivileges] = useState(false);
 
-  const { user, privileges, ensurePrivilegesForUser } = useAuth();
+  const { user } = useAuth();
   const [categories, setCategories] = useState<RawCategory[]>([]);
 
   const counterRef = useRef(selectedCounter);
@@ -1211,31 +1211,58 @@ const ManageTokens = () => {
   // -------------------------------
   // LOAD PRIVILEGES
   // -------------------------------
+  // useEffect(() => {
+  //   const loadPrivileges = async () => {
+  //     setLoadingPrivileges(true);
+
+  //     if (privileges?.categories?.length) {
+  //       setCategories(privileges.categories as RawCategory[]);
+  //     } else if (user) {
+  //       await ensurePrivilegesForUser(user.id);
+
+  //       const stored = localStorage.getItem("UserPrivileges");
+  //       if (stored) {
+  //         try {
+  //           const p = JSON.parse(stored);
+  //           setCategories(p.categories || []);
+  //         } catch {
+  //           setCategories([]);
+  //         }
+  //       }
+  //     }
+
+  //     setLoadingPrivileges(false);
+  //   };
+
+  //   loadPrivileges();
+  // }, [user, privileges, ensurePrivilegesForUser]);
+
   useEffect(() => {
-    const loadPrivileges = async () => {
+  const loadCategories = async () => {
+    try {
       setLoadingPrivileges(true);
 
-      if (privileges?.categories?.length) {
-        setCategories(privileges.categories as RawCategory[]);
-      } else if (user) {
-        await ensurePrivilegesForUser(user.id);
-
-        const stored = localStorage.getItem("UserPrivileges");
-        if (stored) {
-          try {
-            const p = JSON.parse(stored);
-            setCategories(p.categories || []);
-          } catch {
-            setCategories([]);
-          }
-        }
+      const user = JSON.parse(localStorage.getItem("AppUser") || "{}");
+      if (!user?.id) {
+        setCategories([]);
+        return;
       }
 
-      setLoadingPrivileges(false);
-    };
+      const res = await API.getUserPrivilegesById(user.id);
+      const categoriesFromApi = res.data?.Categories || [];
 
-    loadPrivileges();
-  }, [user, privileges, ensurePrivilegesForUser]);
+      setCategories(categoriesFromApi);
+    } catch (err) {
+      console.error("Failed to load categories:", err);
+      setCategories([]);
+    } finally {
+      setLoadingPrivileges(false);
+    }
+  };
+
+  loadCategories();
+}, []);
+
 
   // -------------------------------
   // FILTERS → SUBCATEGORIES + COUNTERS

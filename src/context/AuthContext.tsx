@@ -55,29 +55,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
  
   // Restore from localStorage on mount
+  // useEffect(() => {
+  //   const storedUser = localStorage.getItem("AppUser");
+  //   // const storedPrivileges = localStorage.getItem("UserPrivileges");
+ 
+  //   if (storedUser) {
+  //     try {
+  //       const parsed = JSON.parse(storedUser);
+  //       setUser(parsed);
+  //     } catch (e) {
+  //       console.warn("Failed parsing stored user", e);
+  //     }
+  //   }
+ 
+  //   if (storedPrivileges) {
+  //     try {
+  //       setPrivileges(JSON.parse(storedPrivileges));
+  //     } catch (e) {
+  //       console.warn("Failed parsing stored privileges", e);
+  //     }
+  //   }
+ 
+  //   setLoading(false);
+  // }, []);
+
   useEffect(() => {
-    const storedUser = localStorage.getItem("AppUser");
-    const storedPrivileges = localStorage.getItem("UserPrivileges");
- 
-    if (storedUser) {
-      try {
-        const parsed = JSON.parse(storedUser);
-        setUser(parsed);
-      } catch (e) {
-        console.warn("Failed parsing stored user", e);
-      }
+  const storedUser = localStorage.getItem("AppUser");
+
+  if (storedUser) {
+    try {
+      const parsed = JSON.parse(storedUser);
+      setUser(parsed);
+    } catch (e) {
+      console.warn("Failed parsing stored user", e);
     }
- 
-    if (storedPrivileges) {
-      try {
-        setPrivileges(JSON.parse(storedPrivileges));
-      } catch (e) {
-        console.warn("Failed parsing stored privileges", e);
-      }
-    }
- 
-    setLoading(false);
-  }, []);
+  }
+
+  setLoading(false);
+}, []);
+
  
   // Login: receives the raw login response from /Account/ValidateLogin
   const login = async (data: any) => {

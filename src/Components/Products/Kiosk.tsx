@@ -1011,9 +1011,10 @@ import { useState, useEffect, useRef } from "react";
 import { Maximize2 } from "lucide-react";
 import logo from "../../assets/utkal.png";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+// import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import { toast } from "react-hot-toast";
+import { API } from "../../services/AllApiServices";
 
 interface Subcategory {
   id: number;
@@ -1025,7 +1026,7 @@ interface Subcategory {
 
 const Kiosk = () => {
   const navigate = useNavigate();
-  const { privileges } = useAuth();
+  // const { privileges } = useAuth();
 
   const [selectedSubs, setSelectedSubs] = useState<Subcategory[]>([]);
   const [visibleSubs, setVisibleSubs] = useState<number[]>([]);
@@ -1036,6 +1037,8 @@ const Kiosk = () => {
   const [cursorIndex, setCursorIndex] = useState(0);
   // const [ setLoadingToken] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [loadingSubs, setLoadingSubs] = useState(false);
+
 
   // Listen for exit fullscreen
   useEffect(() => {
@@ -1049,23 +1052,68 @@ const Kiosk = () => {
   }, []);
 
   // Load user subcategories
+  // useEffect(() => {
+  //   if (privileges?.categories) {
+  //     const formattedSubs: Subcategory[] = privileges.categories.flatMap(
+  //       (cat: any) =>
+  //         (cat.SubCategories || []).map((sub: any) => ({
+  //           id: Number(sub.SubCategoryId),
+  //           name: sub.SubCategoryName,
+  //           categoryId: Number(cat.CategoryId),
+  //           categoryName: cat.CategoryName,
+  //           counters: sub.Counters || [],
+  //         }))
+  //     );
+
+  //     setSelectedSubs(formattedSubs);
+  //     setVisibleSubs(formattedSubs.map((s) => s.id));
+  //   }
+  // }, [privileges]);
+
   useEffect(() => {
-    if (privileges?.categories) {
-      const formattedSubs: Subcategory[] = privileges.categories.flatMap(
-        (cat: any) =>
-          (cat.SubCategories || []).map((sub: any) => ({
-            id: Number(sub.SubCategoryId),
-            name: sub.SubCategoryName,
-            categoryId: Number(cat.CategoryId),
-            categoryName: cat.CategoryName,
-            counters: sub.Counters || [],
-          }))
+  const loadSubcategories = async () => {
+    try {
+      setLoadingSubs(true);
+
+      const user = JSON.parse(localStorage.getItem("AppUser") || "{}");
+      if (!user?.id) {
+        setSelectedSubs([]);
+        setVisibleSubs([]);
+        return;
+      }
+
+      // ✅ Call API via your service
+      const res = await API.getUserPrivilegesById(user.id);
+
+      const categories = res.data?.Categories || [];
+
+      const formattedSubs: Subcategory[] = categories.flatMap((cat: any) =>
+        (cat.SubCategories || []).map((sub: any) => ({
+          id: Number(sub.SubCategoryId),
+          name: sub.SubCategoryName,
+          categoryId: Number(cat.CategoryId),
+          categoryName: cat.CategoryName,
+          counters: sub.Counters || [],
+        }))
       );
 
       setSelectedSubs(formattedSubs);
       setVisibleSubs(formattedSubs.map((s) => s.id));
+    } catch (err) {
+      console.error("Failed to load kiosk subcategories:", err);
+      toast.error("Failed to load services");
+      setSelectedSubs([]);
+      setVisibleSubs([]);
+    } finally {
+      setLoadingSubs(false);
     }
-  }, [privileges]);
+  };
+
+  loadSubcategories();
+}, []);
+
+
+
 
   const toggleVisible = (id: number) => {
     setVisibleSubs((prev) =>
@@ -1225,10 +1273,15 @@ const Kiosk = () => {
         </div>
 
         <div
-          className={`flex-1 mt-20 px-4 pb-6 ${
-            isFullscreen ? "overflow-hidden" : "overflow-y-auto"
-          }`}
+          className={`flex-1 mt-20 px-4 pb-6 ${isFullscreen ? "overflow-hidden" : "overflow-y-auto"
+            }`}
         >
+          {loadingSubs && (
+            <div className="w-full text-center text-green-700 font-semibold py-6">
+              Loading services...
+            </div>
+          )}
+
           <div
             className="grid w-full h-full place-items-center gap-5 p-5"
             style={{
