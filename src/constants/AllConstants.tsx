@@ -35,10 +35,10 @@ export const ROLE_LABELS: Record<UserRoleType, string> = {
  
 // Consecutive Basis (matches backend ResetType string)
 export const CONSECUTIVE_BASIS = {
-  DAILY: "Daily",
-  WEEKLY: "Weekly",
-  MONTHLY: "Monthly",
-  QUARTERLY: "Quarterly",
+  DAILY: 1,
+  WEEKLY: 2,
+  MONTHLY: 3,
+  QUARTERLY: 4,
 } as const;
 // ------------------------------------------
 // TOKEN STATUS CONSTANTS (Backend Mapped)

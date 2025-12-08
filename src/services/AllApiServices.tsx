@@ -122,14 +122,14 @@ export const API = {
   // TOKEN CONFIGURATION (from A)
   // -------------------------------------------------------
   saveTokenConfig: (data: {
-    Id: number;
+    // Id: number;
     CategoryId: number;
     SubCategoryId: number;
     Prefix: string;
     InitializeNo: string;
-    CurrentNo: string;
-    ResetType: string;
-    LastResetDate: string;
+    // CurrentNo: string;
+    ResetType: number;
+    // LastResetDate: string;
   }) => api.post("/Account/TokenPrefix/Create", data),
 
   // -------------------------------------------------------

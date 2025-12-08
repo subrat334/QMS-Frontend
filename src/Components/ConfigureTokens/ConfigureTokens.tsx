@@ -305,14 +305,14 @@ const ConfigureTokens = () => {
     }
 
     const payload = {
-      Id: 0,
+      // Id: 0,
       CategoryId: selectedCategory,
       SubCategoryId: selectedSubcategory,
       Prefix: config.prefix,
       InitializeNo: config.initializeNumber,
-      CurrentNo: config.initializeNumber,
+      // CurrentNo: config.initializeNumber,
       ResetType: config.consecutiveBasis,
-      LastResetDate: new Date().toISOString(),
+      // LastResetDate: new Date().toISOString(),
     };
 
     try {
@@ -447,7 +447,7 @@ const ConfigureTokens = () => {
                 <select
                   value={config.consecutiveBasis}
                   onChange={(e) =>
-                    setConfig({ ...config, consecutiveBasis: e.target.value as ConsecutiveBasisType })
+                    setConfig({ ...config, consecutiveBasis: Number(e.target.value) as ConsecutiveBasisType })
                   }
                   className="border border-green-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all shadow-sm"
                 >

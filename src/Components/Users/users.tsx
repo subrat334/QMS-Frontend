@@ -594,7 +594,7 @@ const isCreateFormValid = (() => {
   // Input handlers with validations
   const handleNameChange = (value: string) => {
     value = value.replace(/^\s+/, "");
-    value = value.replace(/[^A-Za-z\s]/g, "");
+    value = value.replace(/[^A-Za-z0-9 @#_\-\/.]/g, "");
     value = value.replace(/\s+/g, " ");
     if (value.length > 40) value = value.substring(0, 40);
     setName(value);
