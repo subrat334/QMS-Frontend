@@ -1,7 +1,6 @@
-
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import logo from "../../assets/utkal.png";
+import logo from "../../assets/Utkal_BW_Logo.png";
 
 interface Subcategory {
   id: number;
@@ -29,7 +28,6 @@ const TokenPage = () => {
       .replace(",", " /");
     setDateTime(formatted);
 
-    // ⭐ USE API TOKEN
     if (tokenResponse?.Token) {
       setTokenNumber(tokenResponse.Token);
     }
@@ -51,31 +49,37 @@ const TokenPage = () => {
   return (
     <div className="bg-white flex items-center justify-center min-h-screen">
 
-      {/* OUTER PAPER WIDTH (79mm) */}
       <div
         style={{
-          width: "79mm",
-          padding: "2mm",
+          width: "80mm",
+          height: "80mm",
+          padding: "0mm",
           display: "flex",
           justifyContent: "center",
         }}
       >
-        {/* TOKEN BORDER BOX (70mm) */}
-        <div
-          id="print-area"
-          style={{
-            width: "70mm",
-            padding: "12px",
-            paddingTop: "18px",
-            border: "2px solid #000",
-            textAlign: "center",
-            fontFamily: "Arial, sans-serif",
-          }}
-        >
+       <div
+  id="print-area"
+  style={{
+    width: "80mm",
+    height: "80mm",
+
+    // 🔥 Adjusted padding to remove extra white space
+    padding: "20px 2px 38px 2px",
+    // top | right | bottom | left
+
+    border: "3px solid #000",
+    textAlign: "center",
+    fontFamily: "Arial, sans-serif",
+    fontWeight: "bold",
+  }}
+>
+
           {/* LOGO */}
           <div
             style={{
               width: "100%",
+              // height: "auto",
               display: "flex",
               justifyContent: "center",
               marginBottom: "10px",
@@ -86,32 +90,39 @@ const TokenPage = () => {
               alt="logo"
               style={{
                 width: "150px",
+                // height: "50px",
+                fontWeight: "bold",
                 objectFit: "contain",
               }}
             />
+            
           </div>
 
           {/* SUBCATEGORY */}
-          <div style={{ fontSize: "17px", fontWeight: "bold" }}>
+          <div style={{ fontSize: "30px", marginBottom: "12px" , fontWeight: "bold"}}>
             {subcategory.name.toUpperCase()}
           </div>
 
-          {/* TOKEN NUMBER from API */}
+          {/* TOKEN NUMBER */}
           <div
             style={{
-              fontSize: "17px",
-              fontWeight: "bold",
               marginTop: "10px",
+              marginBottom: "36px",
+              fontWeight: "bold",
             }}
           >
-            TOKEN NO.: {tokenNumber}
+            <div style={{ fontSize: "22px" }}>TOKEN NO.</div>
+            <div style={{ fontSize: "34px" }}>{tokenNumber}</div>
           </div>
+
 
           {/* DATE */}
           <div
             style={{
-              fontSize: "11px",
-              marginTop: "15px",
+              fontSize: "20px",
+              marginTop: "35px",
+              marginBottom: "0px",
+              fontWeight: "bold",
             }}
           >
             {dateTime}
@@ -119,7 +130,6 @@ const TokenPage = () => {
         </div>
       </div>
 
-      {/* PRINT CSS */}
       <style>
         {`
           @media print {
