@@ -4,7 +4,7 @@ import { toast } from "react-hot-toast";
 
 // Create axios instance
 const api = axios.create({
-  baseURL: "http://13.202.228.79/backend/api",
+  baseURL: "https://angular-dev.smaketsolutions.com/backend/api",
   headers: { "Content-Type": "application/json" },
 });
 
