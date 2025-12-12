@@ -140,9 +140,16 @@
 
 
 import AppRoutes from "./routes/AppRoutes";
-
+import { Toaster } from "react-hot-toast";
+ 
 const App = () => {
-  return <AppRoutes />;
+  return (
+    <>
+      <AppRoutes />
+      {/* REQUIRED for toast messages to appear */}
+      <Toaster position="top-right" reverseOrder={false} />
+    </>
+  );
 };
-
+ 
 export default App;

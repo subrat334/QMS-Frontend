@@ -16,10 +16,12 @@ const Login = () => {
 
   const navigate = useNavigate();
   const { login } = useAuth();
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+  setErrorMessage(""); // clear previous error
 
     try {
       const payload = {
@@ -46,11 +48,11 @@ const Login = () => {
         const redirectPath = ROLE_ROUTES[userType] || "/";
         navigate(redirectPath, { replace: true });
       } else {
-        toast.error("Invalid response from server");
+        setErrorMessage("Invalid server response");
       }
     } catch (err: any) {
       console.error(err);
-      toast.error(err?.response?.data?.message || "Login failed!");
+      setErrorMessage(err?.response?.data?.message || "Invalid username or password");
     } finally {
       setLoading(false);
     }
@@ -109,6 +111,10 @@ const Login = () => {
             placeholder="••••••••"
             required
           />
+          {errorMessage && (
+            <p className="text-red-600 text-sm mt-1">{errorMessage}</p>
+          )}
+
 
           {/* Professional eye icon */}
           <div

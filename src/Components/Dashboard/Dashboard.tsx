@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect ,useRef} from "react";
 import { Pencil, Trash2 } from "lucide-react";
 // import MainLayout from "../Layout/MainLayout"; 
 import logo from "../../assets/utkal.png";
@@ -70,6 +70,22 @@ const Dashboard = () => {
   const [counterName, setCounterName] = useState("");
   const [editingCounterId, setEditingCounterId] = useState<number | null>(null);
   const [counterSubmitting, setCounterSubmitting] = useState(false);
+  // Edit Category
+  const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
+
+  // Edit Subcategory
+  const [editingSubcatId, setEditingSubcatId] = useState<number | null>(null);
+
+  const categoryRef = useRef<HTMLInputElement>(null);
+  const subcategoryRef = useRef<HTMLInputElement>(null);
+  const counterRef = useRef<HTMLInputElement>(null);
+
+  const scrollToField = (ref: React.RefObject<HTMLInputElement | null>) => {
+    setTimeout(() => {
+      ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      ref.current?.focus();
+    }, 150);
+  };
 
   // -------------------------
   // Load categories
@@ -152,6 +168,28 @@ const Dashboard = () => {
     }
   };
 
+  const handleUpdateCategory = async () => {
+  try {
+    await API.addOrEditCategory({
+      // CategoryId: editingCategoryId,
+      CategoryId: editingCategoryId ?? undefined,
+
+      Categoryname: categoryName.trim(),
+      CategoryDescription: "",
+    });
+    toast.success("Category updated!");
+
+    setEditingCategoryId(null);
+    setCategoryName("");
+
+    await loadCategories();
+    await loadSubcategories();
+    await loadCounters();
+  } catch (err) {
+    toast.error("Failed to update category");
+  }
+};
+
   // -------------------------
   // Delete Category (existing)
   // -------------------------
@@ -204,29 +242,36 @@ const Dashboard = () => {
     }
   };
 
-  // -------------------------
-  // Edit Subcategory (prompt)
-  // -------------------------
-  const handleEditSubcategory = async (sub: SubCategoryItem) => {
-    const newName = prompt("Enter new subcategory name:", sub.SubCategoryname);
-    if (!newName || !newName.trim()) return;
-
+    const handleUpdateSubcategory = async () => {
     try {
-      const payload = {
-        Id: sub.SubCategoryId,
-        CategoryId: sub.CategoryId,
-        Name: newName.trim(),
-        SubCategoryDescription: "",
-      };
-      await API.addOrEditSubCategory(payload);
-      toast.success("Subcategory updated");
+      await API.addOrEditCategory({
+    CategoryId: editingCategoryId ?? undefined,
+    Categoryname: categoryName.trim(),
+    CategoryDescription: "",
+  });
+
+      toast.success("Subcategory updated!");
+
+      setEditingSubcatId(null);
+      setSelectedCategoryId("");
+      setNewSubcategoryName("");
+
       await loadSubcategories();
       await loadCategories();
       await loadCounters();
-    } catch (err: any) {
-      console.error("handleEditSubcategory:", err);
-      toast.error(err?.response?.data || "Failed to update subcategory");
+    } catch (err) {
+      toast.error("Failed to update subcategory");
     }
+  };
+  // -------------------------
+  // Edit Subcategory (prompt)
+  // -------------------------
+    const handleEditSubcategory = (sub: SubCategoryItem) => {
+    setEditingSubcatId(sub.SubCategoryId);
+    setSelectedCategoryId(sub.CategoryId);
+    setNewSubcategoryName(sub.SubCategoryname);
+    setActiveSection("subcategory");
+    scrollToField(subcategoryRef);
   };
 
   // -------------------------
@@ -289,14 +334,6 @@ const Dashboard = () => {
   // -------------------------
   // Start editing counter (prefill)
   // -------------------------
-  // const startEditCounter = (counter: CounterItem, parentCatId: number, parentSubId: number) => {
-  //   setEditingCounterId(counter.CounterId);
-  //   setCounterName(counter.CounterName);
-  //   setCounterCategory(parentCatId);
-  //   setCounterSubcategory(parentSubId);
-  //   // scroll to top or keep user on same section — ensure activeSection is counter
-  //   setActiveSection("counter");
-  // };
   const startEditCounter = async (counter: CounterItem, parentCatId: number, parentSubId: number) => {
   setActiveSection("counter");
 
@@ -309,6 +346,8 @@ const Dashboard = () => {
   setCounterName(counter.CounterName);
 
   setEditingCounterId(counter.CounterId);
+  // Scroll to counter input
+  scrollToField(counterRef);
 };
 
 
@@ -371,6 +410,7 @@ const Dashboard = () => {
 
             <div className="flex gap-2 mb-6">
               <input
+                ref={categoryRef}
                 type="text"
                 placeholder="Enter category name"
                 value={categoryName}
@@ -379,7 +419,7 @@ const Dashboard = () => {
               />
 
               <button
-                onClick={handleAddCategory}
+                onClick={editingCategoryId ? handleUpdateCategory : handleAddCategory}
                 disabled={!categoryName.trim()}
                 className={`px-4 py-2 rounded-md transition ${
                   categoryName.trim()
@@ -387,7 +427,7 @@ const Dashboard = () => {
                     : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 }`}
               >
-                ➕ Add
+                {editingCategoryId ? "Update" : "➕ Add"}
               </button>
             </div>
 
@@ -409,24 +449,14 @@ const Dashboard = () => {
                         <button
                           title="Edit"
                           className="p-2 rounded-lg text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                          onClick={async () => {
-                            const newName = prompt("Enter new category name:", cat.Categoryname);
-                            if (!newName || !newName.trim()) return;
-                            try {
-                              await API.addOrEditCategory({
-                                CategoryId: cat.CategoryId,
-                                Categoryname: newName.trim(),
-                                CategoryDescription: "",
-                              });
-                              toast.success("Category updated");
-                              await loadCategories();
-                              await loadSubcategories();
-                              await loadCounters();
-                            } catch (err) {
-                              console.error(err);
-                              toast.error("Failed to update category");
-                            }
-                          }}
+                          
+                          onClick={() => {
+                  setEditingCategoryId(cat.CategoryId);
+                  setCategoryName(cat.Categoryname);
+                  setActiveSection("category");
+                    scrollToField(categoryRef);
+                }}
+
                         >
                           <Pencil size={18} />
                         </button>
@@ -468,8 +498,8 @@ const Dashboard = () => {
                   </option>
                 ))}
               </select>
-
-              <input
+                <input
+                ref={subcategoryRef}
                 type="text"
                 placeholder="Enter subcategory name"
                 value={newSubcategoryName}
@@ -478,7 +508,7 @@ const Dashboard = () => {
               />
 
               <button
-                onClick={handleAddSubcategory}
+                onClick={editingSubcatId !== null ? handleUpdateSubcategory : handleAddSubcategory}
                 disabled={!selectedCategoryId || !newSubcategoryName.trim() || addingSubcat}
                 className={`px-4 py-2 rounded-md transition ${
                   selectedCategoryId && newSubcategoryName.trim()
@@ -486,7 +516,11 @@ const Dashboard = () => {
                     : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 }`}
               >
-                {addingSubcat ? "Adding..." : "➕ Add"}
+                {editingSubcatId !== null
+                  ? "Update"
+                  : addingSubcat
+                  ? "Adding..."
+                  : "➕ Add"}
               </button>
             </div>
 
@@ -606,8 +640,8 @@ const Dashboard = () => {
                   </option>
                 ))}
               </select>
-
               <input
+                ref={counterRef}
                 type="text"
                 placeholder="Enter counter name"
                 value={counterName}
