@@ -244,6 +244,7 @@ interface SubcategoryType {
 }
 
 interface TokenConfig {
+  id: number | null;   
   prefix: string;
   // suffix: string;
   initializeNumber: string;
@@ -258,6 +259,7 @@ const ConfigureTokens = () => {
   const [selectedSubcategory, setSelectedSubcategory] = useState<number | "">("");
 
   const [config, setConfig] = useState<TokenConfig>({
+     id: null,     //  NEW
     prefix: "",
     // suffix: "",
     initializeNumber: "1",
@@ -276,6 +278,32 @@ const ConfigureTokens = () => {
       })
       .catch(() => setCategories([]));
   }, []);
+
+  const loadPrefixSeries = async (categoryId: number, subCategoryId: number) => {
+  try {
+    const res = await API.getTokenPrefixSeries(categoryId, subCategoryId);
+    const series = res.data?.[0];
+
+    if (series) {
+      setConfig({
+         id: series.Id || null,
+        prefix: series.Prefix || "",
+        initializeNumber: series.InitializeNo || "1",
+        consecutiveBasis: series.ResetTypeId ?? CONSECUTIVE_BASIS.DAILY,
+      });
+    } else {
+      setConfig({
+         id: null,
+        prefix: "",
+        initializeNumber: "1",
+        consecutiveBasis: CONSECUTIVE_BASIS.DAILY,
+      });
+    }
+  } catch (error) {
+    console.error("Prefix fetch error:", error);
+  }
+};
+
 
   // ---------- On Category Change ----------
   const handleCategoryChange = async (id: number | "") => {
@@ -297,46 +325,59 @@ const ConfigureTokens = () => {
     }
   };
 
+  const handleSubCategoryChange = async (id: number | "") => {
+  setSelectedSubcategory(id);
+
+  if (!selectedCategory || !id) return;
+
+  loadPrefixSeries(Number(selectedCategory), Number(id));
+};
+
+
   // ---------- Save Final Settings ----------
-  const handleSave = async () => {
-    if (!selectedCategory || !selectedSubcategory) {
-      alert("❌ Please select both category and subcategory.");
-      return;
-    }
+const handleSave = async () => {
+  if (!selectedCategory || !selectedSubcategory) {
+    alert("❌ Please select both category and subcategory.");
+    return;
+  }
 
-    const payload = {
-      // Id: 0,
-      CategoryId: selectedCategory,
-      SubCategoryId: selectedSubcategory,
-      Prefix: config.prefix,
-      InitializeNo: config.initializeNumber,
-      // CurrentNo: config.initializeNumber,
-      ResetTypeId: config.consecutiveBasis,
-      // LastResetDate: new Date().toISOString(),
-    };
-
-    try {
-      const res = await API.saveTokenConfig(payload);
-      console.log("API Response:", res.data);
-      alert("✅ Token configuration saved successfully!");
-
-      // 🔥 RESET ALL FIELDS AFTER SAVE
-      setConfig({
-        prefix: "",
-        // suffix: "",
-        initializeNumber: "1",
-        consecutiveBasis: CONSECUTIVE_BASIS.DAILY,
-      });
-
-      setSelectedCategory("");
-      setSelectedSubcategory("");
-      setSubcategories([]);
-
-    } catch (err) {
-      console.error(err);
-      alert("❌ Failed to save configuration!");
-    }
+  const payload = {
+     Id: config.id ?? 0,  
+    CategoryId: selectedCategory,
+    SubCategoryId: selectedSubcategory,
+    Prefix: config.prefix,
+    InitializeNo: config.initializeNumber,
+    ResetTypeId: config.consecutiveBasis,
   };
+
+  try {
+    const res = await API.saveTokenConfig(payload);
+    console.log("API Response:", res.data);
+    alert("✅ Token configuration saved successfully!");
+
+    // RESET CONFIG INPUTS
+    setConfig({
+       id: null,
+      prefix: "",
+      initializeNumber: "1",
+      consecutiveBasis: CONSECUTIVE_BASIS.DAILY,
+    });
+
+    // RESET ONLY SUBCATEGORY
+    setSelectedSubcategory("");
+    setSubcategories([]);
+
+    //  RELOAD SUBCATEGORY LIST FOR THE SELECTED CATEGORY
+    if (selectedCategory) {
+      handleCategoryChange(selectedCategory);
+    }
+
+  } catch (err) {
+    console.error(err);
+    alert("❌ Failed to save configuration!");
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-linear-to-br from-emerald-50 via-green-100 to-green-200 p-8">
@@ -367,7 +408,9 @@ const ConfigureTokens = () => {
             <label className="text-green-50 text-sm mb-2 font-medium">Select Subcategory</label>
             <select
               value={selectedSubcategory}
-              onChange={(e) => setSelectedSubcategory(Number(e.target.value))}
+              // onChange={(e) => setSelectedSubcategory(Number(e.target.value))}
+              onChange={(e) => handleSubCategoryChange(Number(e.target.value))}
+
               disabled={!selectedCategory}
               className="block p-3 rounded-lg bg-emerald-700/80 text-green-50 border border-green-300 focus:outline-none focus:ring-2 focus:ring-green-300 transition-all disabled:opacity-60"
             >
@@ -465,7 +508,7 @@ const ConfigureTokens = () => {
                 onClick={handleSave}
                 className="bg-linear-to-r from-emerald-600 to-green-700 text-white px-8 py-3 rounded-xl shadow-md hover:shadow-lg hover:scale-[1.05] transition-all font-medium"
               >
-                Save Configuration
+                Save
               </button>
             </div>
           </div>

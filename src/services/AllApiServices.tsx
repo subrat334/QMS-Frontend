@@ -228,6 +228,9 @@ updateTokenStatus: (data: {
   Remarks: string;
 }) => api.post("/Counter/AddTokenVisitDetails", data),
 
+getTokenPrefixSeries: (categoryId: number, subCategoryId: number) =>
+  api.get(`/Account/GetTokenPrefixSeries?categoryId=${categoryId}&subCategoryId=${subCategoryId}`)
+
 };
 
 // import api from "./api";
