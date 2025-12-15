@@ -171,10 +171,12 @@ const ManageTokens = () => {
       const mapped: TokenItem[] = tokensFromServer.map((t: any) => {
         console.log("[API] Mapping token:", t);
 
-        let statusText = "PENDING";
-        if (t.Status === TOKEN_STATUS.CALL) statusText = "CALL";
+        let statusText = "Wait a while";
+
+        if (t.Status === TOKEN_STATUS.CALL) statusText = "CALLING";
+        else if (t.Status === TOKEN_STATUS.INPROGRESS) statusText = "WAIT A WHILE";
         else if (t.Status === TOKEN_STATUS.HOLD) statusText = "HOLD";
-        else if (t.Status === TOKEN_STATUS.RECALL) statusText = "RECALL";
+        else if (t.Status === TOKEN_STATUS.RECALL) statusText = "CALLING";
         else if (t.Status === TOKEN_STATUS.CANCEL) statusText = "Cancelled";
         else if (t.Status === TOKEN_STATUS.DONE) statusText = "DONE";
 
@@ -215,7 +217,7 @@ const ManageTokens = () => {
 useEffect(() => {
   console.log("[SIGNALR] Setup effect triggered");
   if (!counterRef.current || !selectedSubcategory) {
-    console.log("[SIGNALR] Missing   2 counter/subcategory. Aborting listener setup.");
+    console.log("[SIGNALR] Missing counter/subcategory. Aborting listener setup.");
     return;
   }
 
@@ -252,7 +254,7 @@ useEffect(() => {
       subcategoryId: String(tokenPayload.SubCategoryId),
       subcategory: tokenPayload.SubCategoryName,
       counter: tokenPayload.CounterName || "",
-      status: "PENDING",
+      status: "wait a while",
       hold: false,
     };
 
@@ -287,17 +289,23 @@ useEffect(() => {
 
             return {
               ...t,
-              status:
-                tokenStatus.StatusId === TOKEN_STATUS.HOLD
-                  ? "HOLD"
-                  : tokenStatus.StatusId === TOKEN_STATUS.CALL
-                  ? "CALL"
-                  : tokenStatus.StatusId === TOKEN_STATUS.DONE
-                  ? "DONE"
-                  : tokenStatus.StatusId === TOKEN_STATUS.CANCEL
-                  ? "Cancelled"
-                  : t.status,
-              counterId: String(tokenStatus.CounterId),
+             status:
+            tokenStatus.StatusId === TOKEN_STATUS.PENDING
+              ? "WAIT A WHILE"
+              : tokenStatus.StatusId === TOKEN_STATUS.CALL
+              ? "CALLING"
+              : tokenStatus.StatusId === TOKEN_STATUS.INPROGRESS
+              ? "IN PROGRESS"
+              : tokenStatus.StatusId === TOKEN_STATUS.HOLD
+              ? "HOLD"
+              : tokenStatus.StatusId === TOKEN_STATUS.RECALL
+              ? "CALLING"
+              : tokenStatus.StatusId === TOKEN_STATUS.DONE
+              ? "DONE"
+              : tokenStatus.StatusId === TOKEN_STATUS.CANCEL
+              ? "Cancelled"
+              : t.status,
+                        counterId: String(tokenStatus.CounterId),
               hold: tokenStatus.StatusId === TOKEN_STATUS.HOLD,
             };
           }
@@ -383,17 +391,39 @@ useEffect(() => {
     console.log("[HANDLE CALL] Triggered for ID:", id);
 
     const token = tokenData.find((t) => t.id === id);
-    console.log("[HANDLE CALL] Found token:", token);
-
     if (!token) return;
 
-    await sendTokenStatusUpdate(token, "CALL");
+  // Send CALL status to backend
+  await sendTokenStatusUpdate(token, "CALL");
+
+  // Optimistic UI update
+  setTokenData((prev) =>
+    prev.map((t) =>
+      t.id === id ? { ...t, status: "CALLING" } : t
+    )
+  );
 
     if (!calledTokens.includes(id)) {
-      console.log("[HANDLE CALL] Adding to calledTokens:", id);
       setCalledTokens((prev) => [...prev, id]);
     }
   };
+
+
+      const handleStart = async (id: number) => {
+      const token = tokenData.find(t => t.id === id);
+      if (!token) return;
+
+      await sendTokenStatusUpdate(token, "INPROGRESS");
+
+      setTokenData(prev =>
+        prev.map(t =>
+          t.id === id
+            ? { ...t, status: "IN PROGRESS" }
+            : t
+        )
+      );
+    };
+
 
   const handleHold = async (id: number) => {
     console.log("[HANDLE HOLD] Token ID:", id);
@@ -405,27 +435,28 @@ useEffect(() => {
     await sendTokenStatusUpdate(token, "HOLD");
 
     setTokenData((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, hold: true } : t))
+      prev.map((t) =>
+        t.id === id ? { ...t, status: "HOLD", hold: true } : t
+      )
     );
     console.log("[HANDLE HOLD] Token updated to HOLD");
   };
+  ;
 
   const handleRecall = async (id: number) => {
     console.log("[HANDLE RECALL] ID:", id);
 
     const token = tokenData.find((t) => t.id === id);
-    console.log("[HANDLE RECALL] Found:", token);
     if (!token) return;
 
     await sendTokenStatusUpdate(token, "RECALL");
 
     setTokenData((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, hold: false } : t))
+      prev.map((t) =>t.id === id ? { ...t, status: "CALLING", hold: false } : t
+      )
     );
-    console.log("[HANDLE RECALL] Hold removed");
-
-    handleCallPatient(id);
-  };
+};
+;
 
   const handleCancel = async (id: number) => {
     console.log("[HANDLE CANCEL] ID:", id);
@@ -438,10 +469,9 @@ useEffect(() => {
 
     setCalledTokens((prev) => prev.filter((t) => t !== id));
     setTokenData((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, status: "Cancelled" } : t))
-    );
-
-    console.log("[HANDLE CANCEL] Token cancelled");
+      prev.map((t) =>t.id === id ? { ...t, status: "Cancelled" } : t
+    )
+  );
   };
 
   const handleProcessDone = async (id: number) => {
@@ -599,10 +629,12 @@ useEffect(() => {
                         {/* ACTIONS COLUMN */}
                         <td className="px-4 py-3 border-t">
 
+                            {/* Cancelled */}
                           {token.status === "Cancelled" && (
                             <span className="text-red-600">Cancelled</span>
                           )}
 
+                          {/* HOLD */}
                           {token.status === "HOLD" && (
                             <div className="flex gap-2">
                               <button
@@ -628,7 +660,41 @@ useEffect(() => {
                             </div>
                           )}
 
-                          {token.status === "CALL" && (
+                            {/* CALLING */}
+                            {token.status === "CALLING" && (
+                              <div className="flex gap-2">
+                                <button
+                                  className="bg-blue-700 text-white px-3 py-1 rounded"
+                                  onClick={() => handleStart(token.id)}
+                                >
+                                  Start
+                                </button>
+
+                                <button
+                                  className="bg-yellow-500 text-white px-3 py-1 rounded"
+                                  onClick={() => handleHold(token.id)}
+                                >
+                                  Hold
+                                </button>
+
+                                <button
+                                  className="bg-red-600 text-white px-3 py-1 rounded"
+                                  onClick={() => handleCancel(token.id)}
+                                >
+                                  Cancel
+                                </button>
+
+                                <button
+                                  className="bg-green-600 text-white px-3 py-1 rounded"
+                                  onClick={() => handleProcessDone(token.id)}
+                                >
+                                  Done
+                                </button>
+                              </div>
+                            )}
+
+                            {/* IN PROGRESS */}
+                          {token.status === "IN PROGRESS" && (
                             <div className="flex gap-2">
                               <button
                                 className="bg-yellow-500 text-white px-3 py-1 rounded"
@@ -653,10 +719,8 @@ useEffect(() => {
                             </div>
                           )}
 
-                          {(token.status !== "CALL" &&
-                            token.status !== "HOLD" &&
-                            token.status !== "Cancelled" &&
-                            token.status !== "DONE") && (
+                            {/* PENDING */}
+                          {token.status === "Wait a while" && (
                             <button
                               className="bg-green-700 text-white px-3 py-1 rounded"
                               onClick={() => handleCallPatient(token.id)}
