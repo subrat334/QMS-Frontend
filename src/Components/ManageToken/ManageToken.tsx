@@ -215,7 +215,7 @@ const ManageTokens = () => {
 useEffect(() => {
   console.log("[SIGNALR] Setup effect triggered");
   if (!counterRef.current || !selectedSubcategory) {
-    console.log("[SIGNALR] Missing counter/subcategory. Aborting listener setup.");
+    console.log("[SIGNALR] Missing   2 counter/subcategory. Aborting listener setup.");
     return;
   }
 
