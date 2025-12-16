@@ -1038,6 +1038,25 @@ const Kiosk = () => {
   // const [ setLoadingToken] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [loadingSubs, setLoadingSubs] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+    const getGridColumns = (count: number) => {
+    if (count <= 1) return 1;
+    if (count === 2) return 2;
+    if (count <= 4) return 2;
+    if (count <= 6) return 3;
+    if (count <= 9) return 3;
+    return 4;
+  };
+
+    const visibleSubcategories = selectedSubs.filter((s) =>
+      visibleSubs.includes(s.id)
+    );
+
+    const columnCount = getGridColumns(visibleSubcategories.length);
+
+
+
 
 
   // Listen for exit fullscreen
@@ -1112,14 +1131,6 @@ const Kiosk = () => {
   loadSubcategories();
 }, []);
 
-
-
-
-  const toggleVisible = (id: number) => {
-    setVisibleSubs((prev) =>
-      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
-    );
-  };
 
   // Fullscreen handler
   const handleFullscreen = () => {
@@ -1246,18 +1257,96 @@ const Kiosk = () => {
             </button>
           </div>
 
-          <div className="flex flex-wrap gap-4">
+                  <div className="relative">
+              {/* Multi-select input */}
+              <div
+                onClick={() => setIsDropdownOpen((p) => !p)}
+                className="min-h-12max-w-xl
+                          border border-green-500 rounded-lg
+                          px-3 py-2 flex flex-wrap gap-2 items-center
+                          cursor-pointer bg-white"
+              >
+                {visibleSubs.length === 0 && (
+                  <span className="text-gray-400">
+                    Select subcategories
+                  </span>
+                )}
+
+                {selectedSubs
+                  .filter((s) => visibleSubs.includes(s.id))
+                  .map((sub) => (
+                    <span
+                      key={sub.id}
+                      className="flex items-center gap-1
+                                bg-green-600 text-white
+                                px-3 py-1 rounded-full text-sm"
+                      onClick={(e) => e.stopPropagation()} // IMPORTANT
+                    >
+                      {sub.name}
+                      <button
+                        onClick={() =>
+                          setVisibleSubs((prev) =>
+                            prev.filter((id) => id !== sub.id)
+                          )
+                        }
+                        className="ml-1 font-bold hover:text-red-200"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+
+                <span className="ml-auto text-green-700">▼</span>
+              </div>
+
+              {/* Dropdown */}
+              {isDropdownOpen && (
+                <div
+                  className="absolute z-30 mt-1 w-full max-w-xl
+                            bg-white border border-green-300
+                            rounded-lg shadow-lg max-h-64 overflow-y-auto"
+                >
+                  {/* Select All */}
+                  <label className="flex items-center gap-2 px-4 py-2 border-b font-semibold">
+                    <input
+                      type="checkbox"
+                      checked={
+                        selectedSubs.length > 0 &&
+                        visibleSubs.length === selectedSubs.length
+                      }
+                      onChange={(e) =>
+                        setVisibleSubs(
+                          e.target.checked
+                            ? selectedSubs.map((s) => s.id)
+                            : []
+                        )
+                      }
+                    />
+                    Select All
+                  </label>
+
+                  {/* Subcategories */}
             {selectedSubs.map((sub) => (
-              <label key={sub.id} className="flex items-center gap-2">
+              <label key={sub.id} className="flex items-center gap-2 px-4 py-2 hover:bg-green-50">
                 <input
                   type="checkbox"
                   checked={visibleSubs.includes(sub.id)}
-                  onChange={() => toggleVisible(sub.id)}
-                />
-                <span>{sub.name}</span>
+                        onChange={() =>
+                          setVisibleSubs((prev) =>
+                            prev.includes(sub.id)
+                              ? prev.filter((id) => id !== sub.id)
+                              : [...prev, sub.id]
+                          )
+                        }
+                      />
+                      {sub.name}
               </label>
             ))}
           </div>
+              )}
+            </div>
+
+
         </div>
       )}
 
@@ -1268,13 +1357,27 @@ const Kiosk = () => {
         ${isFullscreen ? "rounded-none" : "rounded-2xl"} 
         flex flex-col overflow-hidden`}
       >
-        <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
-          <img src={logo} alt="Hospital Logo" className="w-28 h-28 object-contain" />
-        </div>
+        {/* Logo + Welcome Message */}
+        <div className="flex flex-col items-center mt-6 md:mt-0 ">
+                  <img
+                    src={logo}
+                    alt="Hospital Logo"
+                    className="w-[clamp(80px,15vw,200px)] h-auto object-contain"
+                  />
 
+                  <div className="mt-4 text-center">
+                    <div className="text-1xl font-bold text-green-700">
+                      (Welcome to Utkal Hospital)
+                    </div>
+                    <div className="text-1x1 font-bold text-green-800 mt-1">
+                      (Please select a service to generate your token)
+                    </div>
+                  </div>
+                </div>
+
+        {/* Service Cards */}
         <div
-          className={`flex-1 mt-20 px-4 pb-6 ${isFullscreen ? "overflow-hidden" : "overflow-y-auto"
-            }`}
+          className={`flex-1 mt-6 px-4 pb-6 ${isFullscreen ? "overflow-hidden" : "overflow-y-auto"}`}
         >
           {loadingSubs && (
             <div className="w-full text-center text-green-700 font-semibold py-6">
@@ -1283,34 +1386,37 @@ const Kiosk = () => {
           )}
 
           <div
-            className="grid w-full h-full place-items-center gap-5 p-5"
+            className="grid gap-6 place-items-center mx-auto transition-all duration-300"
             style={{
-              gridTemplateColumns:
-                "repeat(auto-fit, minmax(clamp(150px, 20vw, 300px), 1fr))",
+              gridTemplateColumns: `repeat(${columnCount}, minmax(260px, 1fr))`,
+              maxWidth: columnCount * 320,
             }}
           >
-            {selectedSubs
-              .filter((s) => visibleSubs.includes(s.id))
-              .map((sub) => (
+              {visibleSubcategories.map((sub) => (
                 <div
                   key={sub.id}
                   onClick={() => handleCardClick(sub)}
-                  className="relative flex flex-col justify-center items-center
+                  className="flex flex-col justify-center items-center
                   bg-linear-to-b from-white via-green-50 to-green-100
-                  text-green-900 border-2 border-green-600 shadow-md rounded-2xl
-                  hover:shadow-xl cursor-pointer transition-all"
+                  text-green-900 border-2 border-green-600
+                  shadow-md rounded-2xl
+                  hover:shadow-xl cursor-pointer transition-all
+                  active:scale-95"
                   style={{
-                    width: "clamp(150px, 20vw, 300px)",
-                    height: "clamp(150px, 18vh, 220px)",
+                    width: "260px",
+                    height: "180px",
                   }}
                 >
-                  <div className="text-lg sm:text-xl font-semibold text-center">{sub.name}</div>
+                  <div className="text-lg font-semibold text-center px-3">
+                    {sub.name}
+                  </div>
                   <div className="w-12 h-1 bg-green-400 rounded-full my-2"></div>
                 </div>
               ))}
           </div>
         </div>
 
+        {/* Footer */}
         <div className="flex-none w-full text-center py-4 bg-green-800 text-white text-lg font-semibold">
           Thank you for visiting Utkal Hospital
         </div>
@@ -1352,7 +1458,7 @@ const Kiosk = () => {
               {renderPhoneNumber()}
             </div>
 
-            <div className="grid grid-cols-3 w-full rounded-2xl overflow-hidden shadow-xl border border-green-200 bg-linear-to-b from-green-50 to-teal-50">
+           <div className="grid grid-cols-3 w-full rounded-2xl overflow-hidden shadow-xl border border-green-300 bg-green-300">
               {["1", "2", "3", "4", "5", "6", "7", "8", "9", "←", "0", "✔"].map(
                 (num) => (
                   <button
@@ -1363,15 +1469,15 @@ const Kiosk = () => {
                       else handleNumberClick(num);
                     }}
                     className={`h-24 text-3xl font-bold flex items-center justify-center
-                    hover:bg-green-100 active:scale-95 active:bg-green-200
+                    border border-green-300 transition
+                    active:scale-95
                     ${
                       num === "✔"
-                        ? "bg-green-500 text-white hover:bg-green-600 active:bg-green-700 shadow-lg"
+                        ? "bg-green-500 text-white hover:bg-green-600 active:bg-green-700"
                         : num === "←"
                         ? "bg-red-100 hover:bg-red-200 active:bg-red-300 text-red-600"
-                        : "bg-white text-green-700"
-                    }
-                  `}
+                        : "bg-white text-green-700 hover:bg-green-100"
+                    }`}
                   >
                     {num === "←" ? "⌫" : num === "✔" ? "OK" : num}
                   </button>
