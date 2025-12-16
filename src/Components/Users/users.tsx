@@ -18,6 +18,7 @@ type ApiUser = {
   UserType: string;
   Name: string;
   EmployeeID: string;
+   IsActive?: boolean; 
   Categories?: Array<{
     Id?: number;
     CategoryId?: string;
@@ -617,6 +618,31 @@ const isPasswordValid =
 
   const isEditMode = !!editUserId;
 
+      const handleToggleUserStatus = async (
+        userId: string,
+        currentStatus?: boolean
+      ) => {
+        const newStatus = !(currentStatus ?? true);
+
+        try {
+          await API.updateUserActiveStatus(userId, newStatus);
+
+          setUsers(prevUsers =>
+            prevUsers.map(user =>
+              user.UserId === userId
+                ? { ...user, IsActive: newStatus }
+                : user
+            )
+          );
+
+          toast.success(
+            `User ${newStatus ? "activated" : "deactivated"}`
+          );
+        } catch (error) {
+          console.error(error);
+          toast.error("Failed to update user status");
+        }
+      };
 
 
 
@@ -1000,30 +1026,44 @@ const isPasswordValid =
                 className="bg-white border border-green-200 rounded-xl shadow-md hover:shadow-lg transition-all p-4"
               >
                 {/* Edit/Delete buttons (top-right) */}
-                <div className="flex justify-end space-x-2 mb-2">
+               <div className="flex justify-end items-center space-x-3 mb-2">
+                    {/* Active / Inactive Toggle */}
+                    <button
+                    onClick={() => handleToggleUserStatus(u.UserId, u.IsActive)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                    ${u.IsActive ? "bg-green-600" : "bg-gray-300"}
+                    `}
+                    title={u.IsActive ? "Active" : "Inactive"}
+                    >
+                    <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                    ${u.IsActive ? "translate-x-6" : "translate-x-1"}
+                    `}
+                    />
+                    </button>
+
+                        {/* Edit */}
                   <button
                     onClick={() => openEditPrivileges(u.UserId)}
                     className="p-2 rounded-lg text-green-600 hover:text-green-800 hover:bg-green-50 transition-all duration-200"
+                    title="Edit User"
                   >
                     <Pencil size={18} />
                   </button>
 
-                  {/* <button
-                    onClick={() => handleDeleteUser(u.UserId)}
-                    className="p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-all duration-200"
-                  >
-                    <Trash2 size={18} />
-                  </button> */}
+              {/* Delete (hide for SuperAdmin) */}
                   {u.UserType !== "SuperAdmin" && (
                     <button
                       onClick={() => handleDeleteUser(u.UserId)}
                       className="p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-all duration-200"
+                      title="Delete User"
                     >
                       <Trash2 size={18} />
                     </button>
                   )}
 
                 </div>
+
 
                 {/* Center Content (avatar + name + type) */}
                 <div className="flex flex-col items-center text-center">

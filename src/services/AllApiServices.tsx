@@ -229,7 +229,15 @@ updateTokenStatus: (data: {
 }) => api.post("/Counter/AddTokenVisitDetails", data),
 
 getTokenPrefixSeries: (categoryId: number, subCategoryId: number) =>
-  api.get(`/Account/GetTokenPrefixSeries?categoryId=${categoryId}&subCategoryId=${subCategoryId}`)
+  api.get(`/Account/GetTokenPrefixSeries?categoryId=${categoryId}&subCategoryId=${subCategoryId}`),
+// -------------------------------------------------------
+// USER ACTIVE / INACTIVE
+// -------------------------------------------------------
+updateUserActiveStatus: (userId: string, isActive: boolean) =>
+  api.post(
+    `/Account/UpdateUserActive?UserId=${userId}&IsActive=${isActive}`
+  ),
+
 
 };
 
