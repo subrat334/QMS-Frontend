@@ -237,6 +237,14 @@ updateUserActiveStatus: (userId: string, isActive: boolean) =>
   api.post(
     `/Account/UpdateUserActive?UserId=${userId}&IsActive=${isActive}`
   ),
+  updateNormalUserDetails: (data: {
+  UserId: string;
+  FirstName: string;
+  UserType: number;
+  EmployeeID: string;
+}) =>
+  api.post("/Account/UpdateNormalUserDetails", data),
+
 
 
 };

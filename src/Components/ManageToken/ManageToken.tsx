@@ -254,7 +254,7 @@ useEffect(() => {
       subcategoryId: String(tokenPayload.SubCategoryId),
       subcategory: tokenPayload.SubCategoryName,
       counter: tokenPayload.CounterName || "",
-      status: "wait a while",
+      status: "Wait a while",
       hold: false,
     };
 

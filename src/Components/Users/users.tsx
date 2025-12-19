@@ -65,6 +65,99 @@ const ROLE_OPTIONS = [
   // { label: "Super Admin", value: USER_ROLES.SUPER_ADMIN },
 ];
 
+// ================= MULTI SELECT DROPDOWN (LOCAL) =================
+  type DropdownOption = {
+    id: number;
+    label: string;
+  };
+
+  type MultiSelectDropdownProps = {
+    label: string;
+    options: DropdownOption[];
+    selectedIds: number[];
+    onChange: (ids: number[]) => void;
+    disabled?: boolean;
+  };
+
+  const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
+    label,
+    options,
+    selectedIds,
+    onChange,
+    disabled = false,
+  }) => {
+  const [open, setOpen] = React.useState(false);
+
+  const toggle = (id: number) => {
+    onChange(
+      selectedIds.includes(id)
+        ? selectedIds.filter((x) => x !== id)
+        : [...selectedIds, id]
+    );
+  };
+
+  const toggleAll = () => {
+    if (selectedIds.length === options.length) {
+      onChange([]);
+    } else {
+      onChange(options.map((o) => o.id));
+    }
+  };
+
+  return (
+    <div className="relative w-full">
+      <label className="block mb-1 font-medium text-green-800">
+        {label}
+      </label>
+
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((prev) => !prev)}
+        className={`w-full text-left px-3 py-2 border rounded-md bg-white
+          ${
+            disabled
+              ? "bg-gray-100 cursor-not-allowed"
+              : "border-green-200 focus:ring-2 focus:ring-green-500"
+          }`}
+      >
+        {selectedIds.length > 0
+          ? `${selectedIds.length} selected`
+          : "Select"}
+      </button>
+
+      {open && !disabled && (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-green-200 rounded-md shadow max-h-60 overflow-auto">
+          {/* Select All */}
+          <div
+            onClick={toggleAll}
+            className="px-3 py-2 cursor-pointer hover:bg-green-50 font-medium"
+          >
+            {selectedIds.length === options.length
+              ? "Unselect All"
+              : "Select All"}
+          </div>
+
+          {options.map((opt) => (
+            <label
+              key={opt.id}
+              className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-green-50"
+            >
+              <input
+                type="checkbox"
+                checked={selectedIds.includes(opt.id)}
+                onChange={() => toggle(opt.id)}
+              />
+              <span>{opt.label}</span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+
 // -------------------- Component --------------------
 const Users: React.FC = () => {
   // Users
@@ -73,10 +166,10 @@ const Users: React.FC = () => {
 
   // Category/Subcategory/Counter lists
   const [categories, setCategories] = useState<CategorySimple[]>([]);
-  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [, setLoadingCategories] = useState<boolean>(false);
 
   const [subcategories, setSubcategories] = useState<SubCategorySimple[]>([]);
-  const [loadingSubcats, setLoadingSubcats] = useState(false);
+  const [, setLoadingSubcats] = useState(false);
 
   // All counters (optional, from initial full fetch)
   const [counters, setCounters] = useState<CounterSimple[]>([]);
@@ -103,7 +196,8 @@ const Users: React.FC = () => {
   const [passwordError, setPasswordError] = useState("");
 
   // Privilege selections
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | "">("");
+  // const [selectedCategoryId, setSelectedCategoryId] = useState<number | "">("");
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
   const [selectedSubcategories, setSelectedSubcategories] = useState<number[]>([]);
   const [selectedCounterIds, setSelectedCounterIds] = useState<number[]>([]); // store counter.CounterId (number)
 
@@ -117,6 +211,12 @@ const Users: React.FC = () => {
   const [passwordEditUserName, setPasswordEditUserName] = useState<string | null>(
     null
   );
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+
+  const toggleAccordion = (userId: string) => {
+  setExpandedUserId(prev => (prev === userId ? null : userId));
+};
+
 
   // -------------------- Loaders --------------------
   const loadUsers = async () => {
@@ -188,6 +288,11 @@ const Users: React.FC = () => {
     }
   };
 
+  const isCounterSimple = (
+  c: CounterSimple | undefined
+): c is CounterSimple => c !== undefined;
+
+
   // initial load
   useEffect(() => {
     loadUsers();
@@ -204,7 +309,8 @@ const Users: React.FC = () => {
     setPassword("");
     setConfirmPassword("");
     setPasswordError("");
-    setSelectedCategoryId("");
+    // selectedCategoryIds([]);
+    setSelectedCategoryIds([]);
     setSelectedSubcategories([]);
     setSelectedCounterIds([]);
     setEditUserId(null);
@@ -234,64 +340,6 @@ const Users: React.FC = () => {
   };
 
   // When user toggles a subcategory: fetch counters if selecting; remove counters if deselecting
-  const toggleSubcategory = async (subId: number) => {
-    const isCurrentlySelected = selectedSubcategories.includes(subId);
-
-    if (isCurrentlySelected) {
-      // deselect: remove subcategory and also remove counters that belong to it
-      setSelectedSubcategories((prev) => prev.filter((p) => p !== subId));
-      setSelectedCounterIds((prev) =>
-        prev.filter((cid) => {
-          const c = findCounterByBackendId(cid);
-          return c ? c.SubCategoryId !== subId : true;
-        })
-      );
-      setSubcatCounters((prev) => {
-        const copy = { ...prev };
-        delete copy[subId];
-        return copy;
-      });
-      setLoadingCountersBySubcat((prev) => {
-        const copy = { ...prev };
-        delete copy[subId];
-        return copy;
-      });
-      return;
-    }
-
-    // selecting: add and fetch counters for that subcategory
-    setSelectedSubcategories((prev) => [...prev, subId]);
-    setLoadingCountersBySubcat((prev) => ({ ...prev, [subId]: true }));
-
-    try {
-      // API call that you asked for: /Counter/GetCounterdetailsbycategoryid?SubCatid=<id>
-      const res = await API.getCountersBySubCategoryId(subId);
-      const received: any[] = res.data || [];
-
-      const normalized = received.map((c: any) => ({
-        Id: Number(c.CounterId),
-        CounterId: Number(c.CounterId),
-        Name: c.CounterName,
-
-        CategoryId: typeof selectedCategoryId === "number" ? Number(selectedCategoryId) : 0,
-        CategoryName:
-          categories.find((cat) => cat.CategoryId === selectedCategoryId)?.Categoryname || "",
-
-        SubCategoryId: subId,
-        SubCategoryName:
-          subcategories.find((sc) => sc.SubCategoryId === subId)?.SubCategoryname || "",
-      })) as CounterSimple[];
-
-      setSubcatCounters((prev) => ({ ...prev, [subId]: normalized }));
-    } catch (err) {
-      console.error("fetch counters for subcat:", subId, err);
-      toast.error("Failed to load counters for selected subcategory");
-      // if fetch failed, remove subcategory selection to keep UX consistent
-      setSelectedSubcategories((prev) => prev.filter((p) => p !== subId));
-    } finally {
-      setLoadingCountersBySubcat((prev) => ({ ...(prev || {}), [subId]: false }));
-    }
-  };
 
   // -------------------- Role helpers & rules --------------------
   const isMIS = designation === USER_ROLES.MIS;
@@ -301,29 +349,46 @@ const Users: React.FC = () => {
   const requiresCounters = !isNoCounterRole && !isMIS; // COUNTER & SUPER_ADMIN require counters
 
   // -------------------- Build payload for privileges --------------------
-  const buildPrivilegesPayload = (userId: string) => {
-    if (!selectedCategoryId) throw new Error("Category not selected");
+const buildPrivilegesPayload = (userId: string) => {
+  if (!selectedCategoryIds.length) {
+    throw new Error("Category not selected");
+  }
 
-    const subs = selectedSubcategories.map((subId) => {
-      // counters for this subcategory (only those selected by user)
-      const countersForSub = selectedCounterIds
-        .map((cid) => findCounterByBackendId(cid))
-        .filter(Boolean)
-        .filter((c) => c!.SubCategoryId === subId)
-        .map((c) => ({ CounterId: Number(c!.CounterId) }));
+  return {
+    UserId: userId,
+    Categories: selectedCategoryIds.map((categoryId) => {
+      const subCatsForCategory = selectedSubcategories.filter((subId) => {
+        const sub = subcategories.find(
+          (s) => s.SubCategoryId === subId
+        );
+        return sub?.CategoryId === categoryId;
+      });
 
       return {
-        SubCategoryId: subId,
-        Counters: isNoCounterRole ? [] : countersForSub,
-      };
-    });
+        CategoryId: categoryId,
+        SubCategories: subCatsForCategory.map((subId) => {
+          const countersForSub = selectedCounterIds
+            .map((cid) => findCounterByBackendId(cid))
+            .filter(isCounterSimple) // ✅ NO undefined beyond this point
+            .filter(
+              (c) =>
+                c.SubCategoryId === subId &&
+                c.CategoryId === categoryId
+            )
+            .map((c) => ({
+              CounterId: c.CounterId, // number → backend expects number
+            }));
 
-    return {
-      UserId: userId,
-      CategoryId: selectedCategoryId,
-      SubCategories: subs,
-    };
+          return {
+            SubCategoryId: subId,
+            Counters: isNoCounterRole ? [] : countersForSub,
+          };
+        }),
+      };
+    }),
   };
+};
+
 
   // -------------------- Create user + privileges --------------------
   const handleCreateUserAndPrivileges = async () => {
@@ -339,7 +404,7 @@ const Users: React.FC = () => {
 
     // Privilege validations only for non-MIS
     if (!isMIS) {
-      if (!selectedCategoryId) {
+      if (!selectedCategoryIds) {
         toast.error("Select a category for privileges");
         return;
       }
@@ -391,32 +456,38 @@ const Users: React.FC = () => {
   };
 
 const isCreateFormValid = (() => {
-  // Basic fields required for all roles
-  if (!name.trim() || !employeeId.trim() || !password.trim() || !confirmPassword.trim()) {
+  // Basic fields
+  if (
+    !name.trim() ||
+    !employeeId.trim() ||
+    !password.trim() ||
+    !confirmPassword.trim()
+  ) {
     return false;
   }
+
   if (password !== confirmPassword) return false;
 
-  // MIS requires no privileges
+  // MIS → no privileges needed
   if (isMIS) return true;
 
-  // MONITOR & PATIENT_SCREEN require category + subcategories only
+  // MONITOR / PATIENT_SCREEN → category + subcategory
   if (isNoCounterRole) {
-    return selectedCategoryId !== "" && selectedSubcategories.length > 0;
+    return selectedCategoryIds.length > 0 && selectedSubcategories.length > 0;
   }
 
-  // COUNTER (and any role that requires counters) require category + subcategories + counters
+  // COUNTER → category + subcategory + counters
   if (requiresCounters) {
     return (
-      selectedCategoryId !== "" &&
+      selectedCategoryIds.length > 0 &&
       selectedSubcategories.length > 0 &&
       selectedCounterIds.length > 0
     );
   }
 
-  // Fallback
   return true;
 })();
+
 
 
 
@@ -426,21 +497,31 @@ const isCreateFormValid = (() => {
       toast.error("No user selected for update");
       return;
     }
-    if (!selectedCategoryId) {
-      toast.error("Select a category for privileges");
-      return;
-    }
 
+  try {
     setIsSubmitting(true);
-    try {
-      const payload = buildPrivilegesPayload(editUserId);
-      await API.updateUserPrivilege(payload);
-      toast.success("Privileges updated");
+
+    // 1️⃣ Update name, employeeId & role
+    await API.updateNormalUserDetails({
+      UserId: editUserId,
+      FirstName: name.trim(),
+      UserType: designation,
+      EmployeeID: employeeId.trim(),
+    });
+
+    // 2️⃣ Update privileges
+    const privilegePayload = buildPrivilegesPayload(editUserId);
+    await API.updateUserPrivilege(privilegePayload);
+
+    toast.success("User details & privileges updated successfully");
+
       resetForm();
-      await loadUsers();
+      await loadUsers(); // ✅ correct function
     } catch (err: any) {
-      console.error("updatePrivileges:", err);
-      toast.error(err?.response?.data || "Failed to update privileges");
+      console.error(err);
+      toast.error(
+        err?.response?.data || "Failed to update user details"
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -488,7 +569,8 @@ const isCreateFormValid = (() => {
       const firstCat = Array.isArray(d.Categories) && d.Categories[0];
       if (firstCat) {
         const catIdNum = Number(firstCat.CategoryId);
-        setSelectedCategoryId(catIdNum);
+        // setSelectedCategoryIds(catIdNum);
+        setSelectedCategoryIds([catIdNum]);
 
         const subIds: number[] =
           (firstCat.SubCategories || []).map((s: any) => Number(s.SubCategoryId)) || [];
@@ -529,7 +611,7 @@ const isCreateFormValid = (() => {
           }
         }
       } else {
-        setSelectedCategoryId("");
+        setSelectedCategoryIds([]);
         setSelectedSubcategories([]);
         setSelectedCounterIds([]);
       }
@@ -740,12 +822,9 @@ const isPasswordValid =
                 <input
   type="text"
   value={name}
-  disabled={isEditMode}
   onChange={(e) => handleNameChange(e.target.value)}
   placeholder="Enter name"
-  className={`w-full border rounded-md px-3 py-2 focus:ring-2 
-    ${isEditMode ? "bg-gray-100 cursor-not-allowed" : "border-green-200 focus:ring-green-500"}
-  `}
+  className="w-full border border-green-200 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500"
 />
 
               </div>
@@ -756,12 +835,9 @@ const isPasswordValid =
                <input
   type="text"
   value={employeeId}
-  disabled={isEditMode}
   onChange={(e) => handleEmployeeIdChange(e.target.value)}
   placeholder="Enter employee id"
-  className={`w-full border rounded-md px-3 py-2 focus:ring-2 
-    ${isEditMode ? "bg-gray-100 cursor-not-allowed" : "border-green-200 focus:ring-green-500"}
-  `}
+  className="w-full border border-green-200 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500"
 />
 
               </div>
@@ -848,7 +924,7 @@ const isPasswordValid =
     setDesignation(newDesignation);
 
     // Reset category/subcategory/counters
-    setSelectedCategoryId("");
+    setSelectedCategoryIds([]);
     setSelectedSubcategories([]);
     setSelectedCounterIds([]);
     setSubcatCounters({});
@@ -864,69 +940,129 @@ const isPasswordValid =
 </select>
 
               </div>
-
               {/* Category - hide for MIS */}
+              {/* Category multi-select (same pattern as subcategory) */}
               {!isMIS && (
-                <div>
-                  <label className="block mb-1 font-medium text-green-800">Select Category</label>
-                  <select
-                    value={selectedCategoryId}
-                    onChange={(e) => {
-                      const val = e.target.value ? Number(e.target.value) : "";
-                      setSelectedCategoryId(val);
-                      // reset subcat/counter selections for new category
-                      setSelectedSubcategories([]);
-                      setSelectedCounterIds([]);
-                      setSubcatCounters({});
-                      setLoadingCountersBySubcat({});
+                <div className="mt-4">
+                  <MultiSelectDropdown
+                    label="Select Categories"
+                    options={categories.map(c => ({
+                      id: c.CategoryId,
+                      label: c.Categoryname,
+                    }))}
+                    selectedIds={selectedCategoryIds}
+                    onChange={(ids) => {
+                      setSelectedCategoryIds(ids);
+
+                      // remove subcategories & counters if category removed
+                      setSelectedSubcategories(prev =>
+                        prev.filter(subId => {
+                          const sub = subcategories.find(s => s.SubCategoryId === subId);
+                          return sub ? ids.includes(sub.CategoryId) : true;
+                        })
+                      );
+
+                      setSelectedCounterIds(prev =>
+                        prev.filter(cid => {
+                          const ctr = findCounterByBackendId(cid);
+                          return ctr ? ids.includes(ctr.CategoryId) : true;
+                        })
+                      );
                     }}
-                    className="w-full border border-green-200 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500"
-                  >
-                    <option value="">-- Select Category --</option>
-                    {loadingCategories ? (
-                      <option>Loading...</option>
-                    ) : (
-                      categories.map((c) => (
-                        <option key={c.CategoryId} value={c.CategoryId}>
-                          {c.Categoryname}
-                        </option>
-                      ))
-                    )}
-                  </select>
+                  />
                 </div>
               )}
-            </div>
 
-            {/* Subcategory multi-select */}
-            {!isMIS && selectedCategoryId && (
-              <div className="mt-4">
-                <label className="block mb-2 font-medium text-green-800">
-                  Select Subcategories (multiple)
-                </label>
 
-                <div className="flex flex-wrap gap-3">
-                  {loadingSubcats ? (
-                    <div className="text-gray-500">Loading subcategories...</div>
-                  ) : (
-                    subcategories
-                      .filter((s) => s.CategoryId === selectedCategoryId)
-                      .map((s) => (
-                        <label
-                          key={s.SubCategoryId}
-                          className={`px-4 py-2 rounded-full border cursor-pointer transition select-none ${
-                            selectedSubcategories.includes(s.SubCategoryId)
-                              ? "bg-green-600 text-white border-green-700"
-                              : "bg-white border-green-200 text-green-700 hover:bg-green-50"
-                          }`}
-                          onClick={() => toggleSubcategory(s.SubCategoryId)}
-                        >
-                          {s.SubCategoryname}
-                        </label>
-                      ))
-                  )}
-                </div>
-              </div>
-            )}
+                          </div>
+
+                          {/* Subcategory multi-select */}
+                          {!isMIS && (
+              <MultiSelectDropdown
+                label="Select Subcategories"
+                disabled={selectedCategoryIds.length === 0}
+                options={subcategories
+                  .filter(s => selectedCategoryIds.includes(s.CategoryId))
+                  .map(s => ({
+                    id: s.SubCategoryId,
+                    label: s.SubCategoryname,
+                  }))}
+
+                selectedIds={selectedSubcategories}
+
+                onChange={async (newIds) => {
+                  // 1️⃣ Find added subcategories
+                  const added = newIds.filter(
+                    id => !selectedSubcategories.includes(id)
+                  );
+
+                  // 2️⃣ Find removed subcategories
+                  const removed = selectedSubcategories.filter(
+                    id => !newIds.includes(id)
+                  );
+
+                  // 3️⃣ Update state
+                  setSelectedSubcategories(newIds);
+
+                  // 4️⃣ Handle REMOVED subcategories
+                  if (removed.length > 0) {
+                    setSelectedCounterIds(prev =>
+                      prev.filter(cid => {
+                        const ctr = findCounterByBackendId(cid);
+                        return ctr ? !removed.includes(ctr.SubCategoryId) : true;
+                      })
+                    );
+
+                    setSubcatCounters(prev => {
+                      const copy = { ...prev };
+                      removed.forEach(id => delete copy[id]);
+                      return copy;
+                    });
+                  }
+
+                  // 5️⃣ Handle ADDED subcategories → CALL API 🔥
+                  for (const subId of added) {
+                    try {
+                      setLoadingCountersBySubcat(prev => ({
+                        ...prev,
+                        [subId]: true,
+                      }));
+
+                      const res = await API.getCountersBySubCategoryId(subId);
+                      const received = res.data || [];
+
+                      const sub = subcategories.find(
+                        s => s.SubCategoryId === subId
+                      );
+
+                      const normalized = received.map((c: any) => ({
+                        Id: Number(c.CounterId),
+                        CounterId: Number(c.CounterId),
+                        Name: c.CounterName,
+                        CategoryId: sub?.CategoryId ?? 0,
+                        CategoryName: sub?.Categoryname ?? "",
+                        SubCategoryId: subId,
+                        SubCategoryName: sub?.SubCategoryname ?? "",
+                      }));
+
+                      setSubcatCounters(prev => ({
+                        ...prev,
+                        [subId]: normalized,
+                      }));
+                    } catch (e) {
+                      toast.error("Failed to load counters");
+                    } finally {
+                      setLoadingCountersBySubcat(prev => ({
+                        ...prev,
+                        [subId]: false,
+                      }));
+                    }
+                  }
+                }}
+              />
+
+              )}
+
 
             {/* Counters: show only for roles that require counters */}
             {!isMIS && !isNoCounterRole && selectedSubcategories.length > 0 && (
@@ -1011,108 +1147,237 @@ const isPasswordValid =
       </div>
 
       {/* Registered Users */}
-      <div>
-        <h3 className="text-xl font-semibold text-green-800 mb-4">Registered Users</h3>
+  <div>
+  <h3 className="text-xl font-semibold text-green-800 mb-4">
+    Registered Users
+  </h3>
 
         {loadingUsers ? (
           <p className="text-gray-500">Loading users...</p>
         ) : users.length === 0 ? (
           <p className="text-gray-500">No users found.</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {users.map((u, index) => (
-              <div
-                key={u.UserId || index}
-                className="bg-white border border-green-200 rounded-xl shadow-md hover:shadow-lg transition-all p-4"
-              >
-                {/* Edit/Delete buttons (top-right) */}
-               <div className="flex justify-end items-center space-x-3 mb-2">
-                    {/* Active / Inactive Toggle */}
-                    <button
-                    onClick={() => handleToggleUserStatus(u.UserId, u.IsActive)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                    ${u.IsActive ? "bg-green-600" : "bg-gray-300"}
-                    `}
-                    title={u.IsActive ? "Active" : "Inactive"}
-                    >
-                    <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-                    ${u.IsActive ? "translate-x-6" : "translate-x-1"}
-                    `}
-                    />
-                    </button>
+    <div className="relative overflow-x-auto bg-white border border-green-200 rounded-lg">
+      <table className="w-full text-sm text-left text-gray-700">
+        <thead className="bg-green-50 border-b border-green-200">
+          <tr>
+            <th className="px-4 py-3 w-8"></th>
+            <th className="px-6 py-3">User</th>
+            <th className="px-6 py-3">Employee ID</th>
+            <th className="px-6 py-3">Role</th>
+            <th className="px-6 py-3">Status</th>
+            <th className="px-6 py-3 text-right">Actions</th>
+          </tr>
+        </thead>
 
-                        {/* Edit */}
-                  <button
-                    onClick={() => openEditPrivileges(u.UserId)}
-                    className="p-2 rounded-lg text-green-600 hover:text-green-800 hover:bg-green-50 transition-all duration-200"
-                    title="Edit User"
+        <tbody>
+          {users.map((u) => {
+            const isExpanded = expandedUserId === u.UserId;
+
+            return (
+              <React.Fragment key={u.UserId}>
+                {/* ================= MAIN ROW ================= */}
+                <tr
+                  className={`border-b cursor-pointer ${
+                    isExpanded
+                      ? "bg-green-50"
+                      : "hover:bg-green-50"
+                  }`}
+                  onClick={() => toggleAccordion(u.UserId)}
+                >
+                  {/* Expand Icon */}
+                  <td className="px-4 py-3 text-green-700 font-bold">
+                    {isExpanded ? "▼" : "▶"}
+                  </td>
+
+                  {/* Name */}
+                  <td className="px-6 py-3 font-semibold text-green-800">
+                    {u.Name}
+                  </td>
+
+                  {/* Employee ID */}
+                  <td className="px-6 py-3 text-gray-600">
+                    {u.EmployeeID}
+                  </td>
+
+                  {/* Role */}
+                  <td className="px-6 py-3">{u.UserType}</td>
+
+                  {/* Status Toggle */}
+                  <td
+                    className="px-6 py-3"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <Pencil size={18} />
-                  </button>
-
-              {/* Delete (hide for SuperAdmin) */}
-                  {u.UserType !== "SuperAdmin" && (
                     <button
-                      onClick={() => handleDeleteUser(u.UserId)}
-                      className="p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-all duration-200"
-                      title="Delete User"
+                      onClick={() =>
+                        handleToggleUserStatus(
+                          u.UserId,
+                          u.IsActive
+                        )
+                      }
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                        ${
+                          u.IsActive
+                            ? "bg-green-600"
+                            : "bg-gray-300"
+                        }
+                      `}
+                      title={
+                        u.IsActive ? "Active" : "Inactive"
+                      }
                     >
-                      <Trash2 size={18} />
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                          ${
+                            u.IsActive
+                              ? "translate-x-6"
+                              : "translate-x-1"
+                          }
+                        `}
+                      />
+                    </button>
+                  </td>
+
+                  {/* Actions */}
+                  <td
+                    className="px-6 py-3 text-right"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="inline-flex items-center gap-2">
+                      {/* Update Password */}
+                      <button
+                        onClick={() => {
+                          if (!u.IsActive) {
+                            toast.error("Inactive users cannot update password");
+                            return;
+                          }
+
+                          openPasswordEditor(u.UserId, u.Name);
+                        }}
+                        disabled={!u.IsActive}
+                        className={`p-2 rounded transition
+                          ${
+                            u.IsActive
+                              ? "text-blue-600 hover:bg-blue-50 cursor-pointer"
+                              : "text-gray-400 cursor-not-allowed"
+                          }
+                        `}
+                        title={
+                          u.IsActive
+                            ? "Update Password"
+                            : "Inactive users cannot update password"
+                        }
+                      >
+                        <Eye size={16} />
+                      </button>
+
+
+                      {/* Edit */}
+                      <button
+                          onClick={() => {
+                            if (!u.IsActive) {
+                              toast.error("Inactive users cannot be edited");
+                              return;
+                            }
+                            openEditPrivileges(u.UserId);
+                          }}
+                          className={`p-2 rounded ${
+                            !u.IsActive
+                              ? "text-gray-400 cursor-not-allowed"
+                              : "text-green-600 hover:bg-green-100"
+                          }`}
+                          title="Edit User"
+                        >
+                          <Pencil size={16} />
+                        </button>
+
+
+                      {/* Delete */}
+                      {u.UserType !== "SuperAdmin" && (
+                    <button
+                      onClick={() => {
+                        if (!u.IsActive) {
+                          toast.error("Inactive users cannot be deleted");
+                          return;
+                        }
+                        handleDeleteUser(u.UserId);
+                      }}
+                      className={`p-2 rounded
+                        ${
+                          !u.IsActive
+                            ? "text-gray-400 cursor-not-allowed"
+                            : "text-red-600 hover:bg-red-100"
+                        }
+                      `}
+                      title={
+                        u.IsActive
+                          ? "Delete User"
+                          : "Deactivate user cannot be deleted"
+                      }
+                    >
+                      <Trash2 size={16} />
                     </button>
                   )}
 
-                </div>
+                    </div>
+                  </td>
+                </tr>
 
-
-                {/* Center Content (avatar + name + type) */}
-                <div className="flex flex-col items-center text-center">
-                  <img
-                    className="w-20 h-20 mb-3 rounded-full shadow-md"
-                    src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                    alt="User"
-                  />
-
-                  <h5 className="text-lg font-semibold text-green-800">{u.Name}</h5>
-                  <p className="text-sm text-green-700">{u.UserType}</p>
-
-                  <p className="text-sm text-gray-600 mt-3">
-                    🆔 Employee ID: <span className="text-green-700">{u.EmployeeID}</span>
-                  </p>
-
-                  {/* Categories + Subcategories + Counters */}
-                  <div className="text-sm text-gray-700 mt-3">
-                    {u.Categories?.map((cat) => (
-                      <div key={cat.Id} className="mt-2">
-                        🏷️ <span className="font-medium text-green-700">{cat.CategoryName}</span>
-
-                        {cat.SubCategories?.map((s) => (
-                          <div key={s.Id} className="ml-2 mt-1">
-                            → {s.SubCategoryName}
-                            <div className="text-xs text-gray-500 ml-4">
-                              💠 Counters: {s.Counters?.map((c) => c.CounterName).join(", ")}
+                {/* ================= EXPANDED ROW ================= */}
+                {isExpanded && (
+                  <tr className="bg-gray-50 border-b">
+                    <td colSpan={6} className="px-8 py-4">
+                      {u.Categories?.length ? (
+                        u.Categories.map((cat) => (
+                          <div
+                            key={cat.Id}
+                            className="mb-4"
+                          >
+                            <div className="font-semibold text-green-700">
+                              🏷 {cat.CategoryName}
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
 
-                  {/* Update Password bottom-right */}
-                  <div className="mt-4 flex justify-end w-full">
-                    <span
-                      onClick={() => openPasswordEditor(u.UserId,u.Name)}
-                      className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer underline"
-                    >
-                      Update Password
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+                            {cat.SubCategories?.map((s) => (
+                              <div
+                                key={s.Id}
+                                className="ml-4 mt-2"
+                              >
+                                <div className="font-medium">
+                                  ➤ {s.SubCategoryName}
+                                </div>
+
+                                <div className="ml-4 text-gray-600">
+                                  Counters:{" "}
+                                  {s.Counters?.length
+                                    ? s.Counters
+                                        .map(
+                                          (c) =>
+                                            c.CounterName
+                                        )
+                                        .join(", ")
+                                    : "None"}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-gray-500">
+                          No privileges assigned
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  )}
+</div>
+
     </div>
   );
 };

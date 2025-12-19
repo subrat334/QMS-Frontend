@@ -1367,10 +1367,10 @@ const Kiosk = () => {
 
                   <div className="mt-4 text-center">
                     <div className="text-1xl font-bold text-green-700">
-                      (Welcome to Utkal Hospital)
+                      (Welcome to Utkal Hospital, Bhubaneswar)
                     </div>
                     <div className="text-1x1 font-bold text-green-800 mt-1">
-                      (Please select a service to generate your token)
+                      (To generate token click on the below button)
                     </div>
                   </div>
                 </div>

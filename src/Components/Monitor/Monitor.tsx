@@ -3,6 +3,7 @@ import { API } from "../../services/AllApiServices";
 
 interface TokenData {
   status: string;
+  message: string; 
   tokenNumber: string;
   CounterName: string;
   counterNumber: number | null;
@@ -119,14 +120,28 @@ const Monitor: React.FC<MonitorProps> = ({ fullScreen, setFullScreen }) => {
     loadCategories();
   }, []);
 
+  const enterBrowserFullScreen = () => {
+  const el = document.documentElement;
+  if (el.requestFullscreen) {
+    el.requestFullscreen();
+  }
+};
 
-  /* ✅ ESC FULLSCREEN */
+  const exitBrowserFullScreen = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    }
+  };
   useEffect(() => {
-    const handleEscKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setFullScreen(false);
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        setFullScreen(false);
+      }
     };
-    document.addEventListener("keydown", handleEscKey);
-    return () => document.removeEventListener("keydown", handleEscKey);
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, [setFullScreen]);
 
   const toggleFullScreen = () => {
@@ -134,6 +149,13 @@ const Monitor: React.FC<MonitorProps> = ({ fullScreen, setFullScreen }) => {
       alert("Please select at least one subcategory first!");
       return;
     }
+
+    if (!fullScreen) {
+      enterBrowserFullScreen(); // 👈 REAL fullscreen
+    } else {
+      exitBrowserFullScreen();
+    }
+
     setFullScreen(!fullScreen);
   };
 
@@ -181,6 +203,7 @@ const Monitor: React.FC<MonitorProps> = ({ fullScreen, setFullScreen }) => {
           result[subName] =
             screen?.DisplayList?.map((item: any) => ({
               status: item.Status,
+              message: item.Message,  
               tokenNumber: item.Token,
               CounterName: item.CounterName,
             })) || [];
@@ -232,15 +255,39 @@ const Monitor: React.FC<MonitorProps> = ({ fullScreen, setFullScreen }) => {
       <th className="p-2 font-semibold text-center">Counter</th>
     </tr>
   </thead>
-
   <tbody>
-    {tokens.map((token, i) => (
-      <tr key={i} className="border-b border-green-100 text-center">
-        <td className="p-2 text-center">{token.status}</td>
-        <td className="p-2 font-bold text-center">{token.tokenNumber}</td>
-        <td className="p-2 text-center">{token.CounterName ?? "-"}</td>
+    {tokens.map((token, i) => {
+    const rowBg =
+      token.message === "INPROGRESS"
+        ? "bg-green-200"
+        : token.message === "CALLING"
+        ? "bg-yellow-200"
+        : token.message === "NEXT"
+        ? "bg-blue-200"
+        : "bg-white";
+
+    return (
+      <tr
+        key={i}
+        className={`border-b border-green-300 text-center font-bold ${rowBg}`}
+      >
+        {/* STATUS */}
+        <td className="p-2 text-center">
+          {token.message}
+        </td>
+
+        {/* TOKEN NUMBER */}
+        <td className="p-2 text-center">
+          {token.tokenNumber}
+        </td>
+
+        {/* COUNTER */}
+        <td className="p-2 text-center">
+          {token.CounterName ?? "-"}
+        </td>
       </tr>
-    ))}
+    );
+  })}
   </tbody>
 </table>
 
@@ -255,7 +302,17 @@ const Monitor: React.FC<MonitorProps> = ({ fullScreen, setFullScreen }) => {
     return (
       <div className="h-screen w-screen p-4 bg-black overflow-hidden">
         <div className="grid grid-cols-2 gap-4 h-full">
-          {selectedSubcategories.map((sub) => renderTable(sub, true))}
+          {selectedSubcategories.map((sub, index) => {
+            const isLast =
+              selectedSubcategories.length % 2 !== 0 &&
+              index === selectedSubcategories.length - 1;
+
+            return (
+              <div key={sub} className={isLast ? "col-span-2" : ""}>
+                {renderTable(sub, true)}
+              </div>
+            );
+          })}
         </div>
       </div>
     );
