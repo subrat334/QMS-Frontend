@@ -542,86 +542,107 @@ const isCreateFormValid = (() => {
 
   // -------------------- Edit / Prefill privileges --------------------
   const openEditPrivileges = async (userId: string) => {
-    try {
-      const res = await API.getUserPrivilegesById(userId);
-      const d = res.data;
-      if (!d) {
-        toast.error("Failed to fetch user details");
-        return;
-      }
+  try {
+    const res = await API.getUserPrivilegesById(userId);
+    const d = res.data;
 
-      // prefill top-level info (name / employee / designation)
-      setName(d.Name || "");
-      setEmployeeId(d.EmployeeID || "");
-      // map user type to numeric
-      const ut = String(d.UserType || "").toLowerCase();
-      if (ut.includes("mis")) setDesignation(USER_ROLES.MIS);
-      else if (ut.includes("monitor")) setDesignation(USER_ROLES.MONITOR);
-      else if (ut.includes("patient")) setDesignation(USER_ROLES.PATIENT_SCREEN);
-      // else if (ut.includes("super")) setDesignation(USER_ROLES.SUPER_ADMIN);
-      else setDesignation(USER_ROLES.COUNTER);
+    if (!d) {
+      toast.error("Failed to fetch user details");
+      return;
+    }
 
-      setEditUserId(d.UserId);
-      setPasswordEditMode(false);
-      setPasswordEditUserId(null);
+    // ---------------- Top-level info ----------------
+    setName(d.Name || "");
+    setEmployeeId(d.EmployeeID || "");
 
-      // Prefill privilege selections; backend returns Categories array (we assume first category is primary)
-      const firstCat = Array.isArray(d.Categories) && d.Categories[0];
-      if (firstCat) {
-        const catIdNum = Number(firstCat.CategoryId);
-        // setSelectedCategoryIds(catIdNum);
-        setSelectedCategoryIds([catIdNum]);
+    const ut = String(d.UserType || "").toLowerCase();
+    if (ut.includes("mis")) setDesignation(USER_ROLES.MIS);
+    else if (ut.includes("monitor")) setDesignation(USER_ROLES.MONITOR);
+    else if (ut.includes("patient")) setDesignation(USER_ROLES.PATIENT_SCREEN);
+    else setDesignation(USER_ROLES.COUNTER);
 
-        const subIds: number[] =
-          (firstCat.SubCategories || []).map((s: any) => Number(s.SubCategoryId)) || [];
-        setSelectedSubcategories(subIds);
+    setEditUserId(d.UserId);
+    setPasswordEditMode(false);
+    setPasswordEditUserId(null);
 
-        const flatCounterIds: number[] = [];
-        (firstCat.SubCategories || []).forEach((s: any) => {
-          (s.Counters || []).forEach((c: any) => {
-            flatCounterIds.push(Number(c.CounterId));
+    // ---------------- FIX: Prefill ALL categories ----------------
+    if (Array.isArray(d.Categories) && d.Categories.length > 0) {
+      // 1️⃣ Categories
+      const categoryIds = d.Categories.map((c: any) =>
+        Number(c.CategoryId)
+      );
+      setSelectedCategoryIds(categoryIds);
+
+      // 2️⃣ Subcategories & Counters
+      const subIds: number[] = [];
+      const counterIds: number[] = [];
+
+      d.Categories.forEach((cat: any) => {
+        (cat.SubCategories || []).forEach((sub: any) => {
+          const subId = Number(sub.SubCategoryId);
+          subIds.push(subId);
+
+          (sub.Counters || []).forEach((ctr: any) => {
+            counterIds.push(Number(ctr.CounterId));
           });
         });
-        setSelectedCounterIds(flatCounterIds);
+      });
 
-        // For better UX, fetch counters for these subcats and populate subcatCounters so UI can show them
-        for (const sid of subIds) {
-          try {
-            setLoadingCountersBySubcat((prev) => ({ ...(prev || {}), [sid]: true }));
-            const resC = await API.getCountersBySubCategoryId(sid);
-            const received: any[] = resC.data || [];
+      setSelectedSubcategories(subIds);
+      setSelectedCounterIds(counterIds);
 
-            const normalized = received.map((c: any) => ({
-              Id: Number(c.CounterId),
-              CounterId: Number(c.CounterId),
-              Name: c.CounterName,
-              CategoryId: Number(firstCat.CategoryId),
-              CategoryName: firstCat.CategoryName || "",
-              SubCategoryId: sid,
-              SubCategoryName:
-                (firstCat.SubCategories || []).find((s: any) => Number(s.SubCategoryId) === sid)
-                  ?.SubCategoryName || "",
-            }));
+      // 3️⃣ Fetch counters for each subcategory
+      for (const subId of subIds) {
+        try {
+          setLoadingCountersBySubcat((prev) => ({
+            ...prev,
+            [subId]: true,
+          }));
 
-            setSubcatCounters((prev) => ({ ...prev, [sid]: normalized }));
-          } catch (err) {
-            console.warn("prefetch counters for edit failed:", sid, err);
-          } finally {
-            setLoadingCountersBySubcat((prev) => ({ ...(prev || {}), [sid]: false }));
-          }
+          const resC = await API.getCountersBySubCategoryId(subId);
+          const received: any[] = resC.data || [];
+
+          const subInfo = subcategories.find(
+            (s) => s.SubCategoryId === subId
+          );
+
+          const normalized = received.map((c: any) => ({
+            Id: Number(c.CounterId),
+            CounterId: Number(c.CounterId),
+            Name: c.CounterName,
+            CategoryId: subInfo?.CategoryId ?? 0,
+            CategoryName: subInfo?.Categoryname ?? "",
+            SubCategoryId: subId,
+            SubCategoryName: subInfo?.SubCategoryname ?? "",
+          }));
+
+          setSubcatCounters((prev) => ({
+            ...prev,
+            [subId]: normalized,
+          }));
+        } catch (err) {
+          console.warn("prefetch counters for edit failed:", subId, err);
+        } finally {
+          setLoadingCountersBySubcat((prev) => ({
+            ...prev,
+            [subId]: false,
+          }));
         }
-      } else {
-        setSelectedCategoryIds([]);
-        setSelectedSubcategories([]);
-        setSelectedCounterIds([]);
       }
-
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch (err) {
-      console.error("openEditPrivileges:", err);
-      toast.error("Failed to load user details");
+    } else {
+      // No categories
+      setSelectedCategoryIds([]);
+      setSelectedSubcategories([]);
+      setSelectedCounterIds([]);
     }
-  };
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  } catch (err) {
+    console.error("openEditPrivileges:", err);
+    toast.error("Failed to load user details");
+  }
+};
+
 
   // -------------------- Password editor --------------------
   const openPasswordEditor = (userId: string, userName: string) => {
@@ -820,12 +841,12 @@ const isPasswordValid =
               <div>
                 <label className="block mb-1 font-medium text-green-800">Name</label>
                 <input
-  type="text"
-  value={name}
-  onChange={(e) => handleNameChange(e.target.value)}
-  placeholder="Enter name"
-  className="w-full border border-green-200 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500"
-/>
+                  type="text"
+                  value={name}
+                  onChange={(e) => handleNameChange(e.target.value)}
+                  placeholder="Enter name"
+                  className="w-full border border-green-200 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500"
+                />
 
               </div>
 
@@ -833,12 +854,12 @@ const isPasswordValid =
               <div>
                 <label className="block mb-1 font-medium text-green-800">Employee ID/User Name</label>
                <input
-  type="text"
-  value={employeeId}
-  onChange={(e) => handleEmployeeIdChange(e.target.value)}
-  placeholder="Enter employee id"
-  className="w-full border border-green-200 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500"
-/>
+                  type="text"
+                  value={employeeId}
+                  onChange={(e) => handleEmployeeIdChange(e.target.value)}
+                  placeholder="Enter employee id"
+                  className="w-full border border-green-200 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500"
+                />
 
               </div>
 
@@ -918,26 +939,26 @@ const isPasswordValid =
               <div>
                 <label className="block mb-1 font-medium text-green-800">User Type</label>
                 <select
-  value={designation}
-  onChange={(e) => {
-    const newDesignation = Number(e.target.value);
-    setDesignation(newDesignation);
+              value={designation}
+              onChange={(e) => {
+                const newDesignation = Number(e.target.value);
+                setDesignation(newDesignation);
 
-    // Reset category/subcategory/counters
-    setSelectedCategoryIds([]);
-    setSelectedSubcategories([]);
-    setSelectedCounterIds([]);
-    setSubcatCounters({});
-    setLoadingCountersBySubcat({});
-  }}
-  className="w-full border border-green-200 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500"
->
-  {ROLE_OPTIONS.map((r) => (
-    <option key={r.value} value={r.value}>
-      {r.label}
-    </option>
-  ))}
-</select>
+                // Reset category/subcategory/counters
+                setSelectedCategoryIds([]);
+                setSelectedSubcategories([]);
+                setSelectedCounterIds([]);
+                setSubcatCounters({});
+                setLoadingCountersBySubcat({});
+              }}
+              className="w-full border border-green-200 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500"
+            >
+              {ROLE_OPTIONS.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
 
               </div>
               {/* Category - hide for MIS */}
@@ -1165,7 +1186,7 @@ const isPasswordValid =
             <th className="px-6 py-3">User</th>
             <th className="px-6 py-3">Employee ID</th>
             <th className="px-6 py-3">Role</th>
-            <th className="px-6 py-3">Status</th>
+            {/* <th className="px-6 py-3">Status</th> */}
             <th className="px-6 py-3 text-right">Actions</th>
           </tr>
         </thead>
@@ -1204,7 +1225,7 @@ const isPasswordValid =
                   <td className="px-6 py-3">{u.UserType}</td>
 
                   {/* Status Toggle */}
-                  <td
+                  {/* <td
                     className="px-6 py-3"
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -1236,7 +1257,7 @@ const isPasswordValid =
                         `}
                       />
                     </button>
-                  </td>
+                  </td> */}
 
                   {/* Actions */}
                   <td
