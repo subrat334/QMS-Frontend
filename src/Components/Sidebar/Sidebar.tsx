@@ -442,7 +442,7 @@ const Sidebar = ({ collapsed, setCollapsed }: SidebarProps) => {
                 )}`}
               >
                 <Monitor size={20} />
-                {!collapsed && <span>Monitor</span>}
+                {!collapsed && <span> Q-Monitor</span>}
               </Link>
             </li>
           )}

@@ -374,6 +374,24 @@ const Dashboard = () => {
   const filteredSubcatsForCategory = (catId: number | "") =>
     subcategories.filter((s) => s.CategoryId === Number(catId));
 
+  const resetAllForms = () => {
+  // Category
+  setCategoryName("");
+  setEditingCategoryId(null);
+
+  // Subcategory
+  setSelectedCategoryId("");
+  setNewSubcategoryName("");
+  setEditingSubcatId(null);
+
+  // Counter
+  setCounterCategory("");
+  setCounterSubcategory("");
+  setCounterName("");
+  setEditingCounterId(null);
+};
+
+
   // Render
   return (
       <div className="p-6 w-full">
@@ -391,7 +409,11 @@ const Dashboard = () => {
           ].map((btn) => (
             <div
               key={btn.key}
-              onClick={() => setActiveSection(btn.key as any)}
+              onClick={() => {
+                  resetAllForms();             
+                  setActiveSection(btn.key as any);
+                }}
+
               className={`flex items-center justify-center h-24 rounded-md cursor-pointer font-semibold shadow-sm border transition ${
                 activeSection === btn.key
                   ? "bg-green-700 text-white border-green-700"

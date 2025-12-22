@@ -1366,10 +1366,10 @@ const Kiosk = () => {
                   />
 
                  <div className="mt-4 text-center">
-                <div className="font-bold text-green-700 text-[17px]">
+                <div className="font-bold text-green-700 text-[19px]">
                   Welcome to Utkal Hospital, Bhubaneswar
                 </div>
-                <div className="font-bold text-green-800 mt-1 text-[15px]">
+                <div className="font-bold text-green-800 mt-1 text-[14px]">
                   (To generate token click on the below button)
                 </div>
               </div>

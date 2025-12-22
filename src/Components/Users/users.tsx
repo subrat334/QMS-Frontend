@@ -90,6 +90,23 @@ const ROLE_OPTIONS = [
     disabled = false,
   }) => {
   const [open, setOpen] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const toggle = (id: number) => {
     onChange(
@@ -108,7 +125,7 @@ const ROLE_OPTIONS = [
   };
 
   return (
-    <div className="relative w-full">
+    <div ref={containerRef} className="relative w-full">
       <label className="block mb-1 font-medium text-green-800">
         {label}
       </label>
@@ -117,7 +134,7 @@ const ROLE_OPTIONS = [
         type="button"
         disabled={disabled}
         onClick={() => setOpen((prev) => !prev)}
-        className={`w-full text-left px-3 py-2 border rounded-md bg-white
+        className={`relative w-full text-left px-3 py-2 pr-10 border rounded-md bg-white
           ${
             disabled
               ? "bg-gray-100 cursor-not-allowed"
@@ -127,11 +144,29 @@ const ROLE_OPTIONS = [
         {selectedIds.length > 0
           ? `${selectedIds.length} selected`
           : "Select"}
+
+        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
+          <svg
+            className={`h-4 w-4 transition-transform ${
+              open ? "rotate-180" : ""
+            }`}
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 20 20"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 8l4 4 4-4"
+            />
+          </svg>
+        </span>
       </button>
 
       {open && !disabled && (
         <div className="absolute z-50 mt-1 w-full bg-white border border-green-200 rounded-md shadow max-h-60 overflow-auto">
-          {/* Select All */}
           <div
             onClick={toggleAll}
             className="px-3 py-2 cursor-pointer hover:bg-green-50 font-medium"
@@ -557,12 +592,32 @@ const isCreateFormValid = (() => {
     // ---------------- Top-level info ----------------
     setName(d.Name || "");
     setEmployeeId(d.EmployeeID || "");
-
     const ut = String(d.UserType || "").toLowerCase();
-    if (ut.includes("mis")) setDesignation(USER_ROLES.MIS);
-    else if (ut.includes("monitor")) setDesignation(USER_ROLES.MONITOR);
-    else if (ut.includes("patient")) setDesignation(USER_ROLES.PATIENT_SCREEN);
-    else setDesignation(USER_ROLES.COUNTER);
+
+    switch (ut) {
+      case "mis":
+        setDesignation(USER_ROLES.MIS);
+        break;
+
+      case "display":
+        setDesignation(USER_ROLES.MONITOR);
+        break;
+
+      case "receptionist":        // ✅ added
+      case "patient":
+        setDesignation(USER_ROLES.PATIENT_SCREEN);
+        break;
+
+      case "counter":
+        setDesignation(USER_ROLES.COUNTER);
+        break;
+
+      default:
+        console.warn("Unknown UserType:", d.UserType);
+        setDesignation(USER_ROLES.COUNTER);
+    }
+
+
 
     setEditUserId(d.UserId);
     setPasswordEditMode(false);
@@ -724,6 +779,17 @@ const isPasswordValid =
 
   const isEditMode = !!editUserId;
 
+  useEffect(() => {
+  if (!password || !confirmPassword) {
+    setPasswordError("");
+  } else if (password !== confirmPassword) {
+    setPasswordError("Passwords do not match");
+  } else {
+    setPasswordError("");
+  }
+}, [password, confirmPassword]);
+
+
       // const handleToggleUserStatus = async (
       //   userId: string,
       //   currentStatus?: boolean
@@ -876,10 +942,8 @@ const isPasswordValid =
         <input
           type={showPassword ? "text" : "password"}
           value={password}
-          onChange={(e) => {
-            setPassword(e.target.value);
-            setPasswordError("");
-          }}
+          onChange={(e) => setPassword(e.target.value)}
+
           placeholder="Enter password"
           autoComplete="new-password"
           autoCorrect="off"
@@ -966,7 +1030,7 @@ const isPasswordValid =
               </div>
               {/* Category - hide for MIS */}
               {/* Category multi-select (same pattern as subcategory) */}
-              {!isMIS && (
+              {/* {!isMIS && (
                 <div className="mt-4">
                   <MultiSelectDropdown
                     label="Select Categories"
@@ -979,6 +1043,36 @@ const isPasswordValid =
                       setSelectedCategoryIds(ids);
 
                       // remove subcategories & counters if category removed
+                      setSelectedSubcategories(prev =>
+                        prev.filter(subId => {
+                          const sub = subcategories.find(s => s.SubCategoryId === subId);
+                          return sub ? ids.includes(sub.CategoryId) : true;
+                        })
+                      );
+
+                      setSelectedCounterIds(prev =>
+                        prev.filter(cid => {
+                          const ctr = findCounterByBackendId(cid);
+                          return ctr ? ids.includes(ctr.CategoryId) : true;
+                        })
+                      );
+                    }}
+                  />
+                </div>
+              )} */}
+              {/* Category multi-select */}
+          {!isMIS && (
+            <div>
+              <MultiSelectDropdown
+                label="Select Categories"
+                options={categories.map(c => ({
+                  id: c.CategoryId,
+                  label: c.Categoryname,
+                }))}
+                selectedIds={selectedCategoryIds}
+                onChange={(ids) => {
+                  setSelectedCategoryIds(ids);
+
                       setSelectedSubcategories(prev =>
                         prev.filter(subId => {
                           const sub = subcategories.find(s => s.SubCategoryId === subId);

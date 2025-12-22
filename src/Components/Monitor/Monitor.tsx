@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { API } from "../../services/AllApiServices";
+import utkalLogo from "../../assets/utkal.png";
 
 interface TokenData {
   status: string;
@@ -30,6 +31,13 @@ const Monitor: React.FC<MonitorProps> = ({ fullScreen, setFullScreen }) => {
   const [categoryData, setCategoryData] = useState<CategoryData>({});
   const [tokenData, setTokenData] = useState<Record<string, TokenData[]>>({});
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const HOSPITAL_INFO = {
+  name: "Utkal Hospital, Bhubaneswar",
+  logo: utkalLogo,
+  address:
+    "Defence Colony Rd, Neeladri Vihar, Chandrasekharpur, Bhubaneswar, Odisha 751021",
+};
+
 
   /* ✅ LOAD CATEGORIES FROM LOCAL STORAGE */
   // useEffect(() => {
@@ -264,7 +272,7 @@ const Monitor: React.FC<MonitorProps> = ({ fullScreen, setFullScreen }) => {
         ? "bg-yellow-200"
         : token.message === "NEXT"
         ? "bg-blue-200"
-        : "bg-white";
+        : "bg-pink-200";
 
     return (
       <tr
@@ -298,22 +306,55 @@ const Monitor: React.FC<MonitorProps> = ({ fullScreen, setFullScreen }) => {
   };
 
   /* ✅ FULL SCREEN MODE */
-  if (fullScreen) {
-    return (
-      <div className="h-screen w-screen p-4 bg-black overflow-hidden">
-        <div className="grid grid-cols-2 gap-4 h-full">
+ if (fullScreen) {
+  return (
+    <div className="h-screen w-screen bg-black text-white flex flex-col overflow-hidden">
+
+      {/* 🔷 HEADER */}
+        <div className="relative bg-white text-black py-2 border-b-4 border-green-500">
+
+          {/* LEFT LOGO */}
+          <img
+            src={HOSPITAL_INFO.logo}
+            alt="Hospital Logo"
+            className="absolute left-4 top-1/2 -translate-y-1/2 h-11 w-auto object-contain"
+          />
+
+          {/* CENTER TITLE */}
+          <h1 className="text-center text-3xl font-bold tracking-wide">
+            {HOSPITAL_INFO.name}
+          </h1>
+
+        </div>
+
+
+      {/* 🔷 MAIN CONTENT (TABLES) */}
+      <div className="flex-1 overflow-hidden">
+        <div className="grid grid-cols-2 gap-0 h-full">
           {selectedSubcategories.map((sub, index) => {
             const isLast =
               selectedSubcategories.length % 2 !== 0 &&
               index === selectedSubcategories.length - 1;
 
             return (
-              <div key={sub} className={isLast ? "col-span-2" : ""}>
+              <div
+                key={sub}
+                className={`h-full ${isLast ? "col-span-2" : ""}`}
+              >
                 {renderTable(sub, true)}
               </div>
             );
           })}
         </div>
+      </div>
+
+      {/* 🔷 FOOTER */}
+      <div className="bg-white text-black text-center py-1 px-4 border-t-4 border-green-500">
+        <p className="text-lg font-semibold">
+          {HOSPITAL_INFO.address}
+        </p>
+      </div>
+
       </div>
     );
   }
