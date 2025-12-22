@@ -1010,7 +1010,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Maximize2 } from "lucide-react";
 import logo from "../../assets/utkal.png";
-import { useNavigate } from "react-router-dom";
+// import { useNavigate } from "react-router-dom";
 // import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import { toast } from "react-hot-toast";
@@ -1025,7 +1025,7 @@ interface Subcategory {
 }
 
 const Kiosk = () => {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   // const { privileges } = useAuth();
 
   const [selectedSubs, setSelectedSubs] = useState<Subcategory[]>([]);
@@ -1039,6 +1039,10 @@ const Kiosk = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [loadingSubs, setLoadingSubs] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const [printing, setPrinting] = useState(false);
+const [generatedToken, setGeneratedToken] = useState<string | null>(null);
+const [, setPrintFailed] = useState(false);
 
     const getGridColumns = (count: number) => {
     if (count <= 1) return 1;
@@ -1132,6 +1136,36 @@ const Kiosk = () => {
 }, []);
 
 
+const silentPrint = async (
+  subcategory: string,
+  token: string,
+  datetime: string
+) => {
+  try {
+    const res = await fetch("http://127.0.0.1:5000/print", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-KEY": "KIOSK123",
+      },
+      body: JSON.stringify({ subcategory, token, datetime }),
+    });
+ 
+    return await res.json();
+  } catch (err) {
+    // Printer service not reachable → fallback
+    return {
+      printed: false,
+      token,
+      subcategory,
+      datetime: new Date().toLocaleString("en-GB", { hour12: false }),
+      printer_error: "Service not reachable",
+    };
+  }
+};
+ 
+
+
   // Fullscreen handler
   const handleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -1206,6 +1240,8 @@ const Kiosk = () => {
 
     // setLoadingToken(true);
 
+     setPrinting(true);
+
     try {
       const payload = {
         CategoryId: selectedCard.categoryId,
@@ -1214,26 +1250,34 @@ const Kiosk = () => {
         DeliveryMethod: "Counter",
       };
 
-      const res = await api.post("/Patient/generateToken", payload);
-
-      toast.success("Token generated successfully!");
-
-      navigate(`/TokenPage/${selectedCard.id}`, {
-        state: {
-          subcategory: selectedCard,
-          tokenResponse: res.data,
-          mobile: phoneNumber,
-        },
-      });
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Failed to generate token");
-    } finally {
-      // setLoadingToken(false);
+     const res = await api.post("/Patient/generateToken", payload);
+    const token = res.data?.Token;
+    const now = new Date().toLocaleString("en-GB", { hour12: false });
+ 
+    // 2️⃣ Attempt silent print
+    const printResult = await silentPrint(selectedCard.name, token, now);
+ 
+    if (!printResult.printed) {
+      // Print failed → show token to user
+      setGeneratedToken(token);
+      setPrintFailed(true);
+    } else {
+      // Print succeeded → auto-close modal
       setShowModal(false);
       setPhoneNumber("");
       setCursorIndex(0);
+      setSelectedCard(null);
+      setGeneratedToken(null);
+      setPrintFailed(false);
     }
-  };
+  } catch (err) {
+    // API failure → show toast (staff only), patient sees nothing broken
+    toast.error("Unable to generate token");
+  } finally {
+    setPrinting(false);
+  }
+};
+ 
 
   return (
     <div
@@ -1424,83 +1468,101 @@ const Kiosk = () => {
       </div>
 
       {/* ------------ MODAL ------------ */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50">
-          <div className="bg-white rounded-3xl shadow-2xl w-[350px] p-6 relative flex flex-col items-center">
-            <button
-              onClick={() => {
-                setPhoneNumber("");
-                setCursorIndex(0);
-                setShowModal(false);
-              }}
-              className="absolute top-4 right-4 text-gray-500 hover:text-red-500"
-            >
-              ✕
-            </button>
-
-<h2 className="mb-4">
-  {/* Name - Center */}
-  <div className="text-2xl font-bold text-green-700 text-center">
-    {selectedCard?.name || " "}
-  </div>
-
-  {/* Mobile Number - Force Left */}
-  <div className="w-full text-sm text-gray-500 text-left">
-    Enter Mobile Number
-  </div>
-</h2>
-
-
-
-            <div
-              className="w-full bg-gray-100 border text-center text-4xl font-semibold rounded-2xl py-4 mb-6 cursor-text relative"
-              onClick={handleTextClick}
-            >
-              {renderPhoneNumber()}
-            </div>
-
-           <div className="grid grid-cols-3 w-full rounded-2xl overflow-hidden shadow-xl border border-green-300 bg-green-300">
-              {["1", "2", "3", "4", "5", "6", "7", "8", "9", "←", "0", "✔"].map(
-                (num) => (
-                  <button
-                    key={num}
-                    onClick={() => {
-                      if (num === "←") handleDelete();
-                      else if (num === "✔") handleConfirm();
-                      else handleNumberClick(num);
-                    }}
-                    className={`h-24 text-3xl font-bold flex items-center justify-center
-                    border border-green-300 transition
-                    active:scale-95
-                    ${
-                      num === "✔"
-                        ? "bg-green-500 text-white hover:bg-green-600 active:bg-green-700"
-                        : num === "←"
-                        ? "bg-red-100 hover:bg-red-200 active:bg-red-300 text-red-600"
-                        : "bg-white text-green-700 hover:bg-green-100"
-                    }`}
-                  >
-                    {num === "←" ? "⌫" : num === "✔" ? "OK" : num}
-                  </button>
-                )
-              )}
-            </div>
-
-            <button
-              onClick={() => {
-                setPhoneNumber("");
-                setCursorIndex(0);
-                setShowModal(false);
-              }}
-              className="mt-6 px-6 py-2 rounded-xl bg-red-500 text-white text-lg font-semibold"
-            >
-              Cancel
-            </button>
+   {showModal && (
+  <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50">
+    <div className="bg-white rounded-3xl shadow-2xl w-[350px] p-6 relative flex flex-col items-center">
+      <h2 className="text-2xl font-bold text-green-700 mb-4 text-center">
+        {selectedCard?.name || ""}
+      </h2>
+ 
+      {/* ---------- TOKEN DISPLAY ---------- */}
+      {generatedToken && (
+        <div className="w-full text-center my-4">
+          <div className="text-lg font-semibold text-gray-700 mb-2">Token No</div>
+          <div className="text-5xl font-extrabold text-green-700 bg-green-50 border-2 border-green-600 rounded-2xl py-6 mb-4">
+            {generatedToken}
           </div>
+ 
+          <div className="text-sm text-gray-500">
+            {new Date().toLocaleString("en-GB", { hour12: false })}
+          </div>
+ 
+          <button
+            onClick={() => {
+              // Close modal and reset everything
+              setShowModal(false);
+              setPhoneNumber("");
+              setCursorIndex(0);
+              setSelectedCard(null);
+              setGeneratedToken(null);
+              setPrintFailed(false);
+            }}
+            className="mt-6 px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-2xl"
+          >
+            OK
+          </button>
         </div>
       )}
+ 
+      {/* ---------- MOBILE INPUT ---------- */}
+      {!generatedToken && (
+        <div
+          className="w-full bg-gray-100 border text-center text-4xl font-semibold rounded-2xl py-4 mb-6 cursor-text relative"
+          onClick={handleTextClick}
+        >
+          {renderPhoneNumber()}
+        </div>
+      )}
+ 
+      {/* Number Pad */}
+      {!generatedToken && (
+        <div className="grid grid-cols-3 w-full rounded-2xl overflow-hidden shadow-xl border border-green-200 bg-linear-to-b from-green-50 to-teal-50">
+          {["1","2","3","4","5","6","7","8","9","←","0","✔"].map((num) => (
+            <button
+              key={num}
+              disabled={printing}
+              onClick={() => {
+                if (printing) return;
+                if (num === "←") handleDelete();
+                else if (num === "✔") handleConfirm();
+                else handleNumberClick(num);
+              }}
+              className={`h-24 text-3xl font-bold flex items-center justify-center
+                hover:bg-green-100 active:scale-95 active:bg-green-200
+                ${num === "✔" ? "bg-green-500 text-white hover:bg-green-600 active:bg-green-700 shadow-lg"
+                  : num === "←" ? "bg-red-100 hover:bg-red-200 active:bg-red-300 text-red-600"
+                  : "bg-white text-green-700"}`}
+            >
+              {num === "←" ? "⌫" : num === "✔" ? "OK" : num}
+            </button>
+          ))}
+        </div>
+      )}
+ 
+      {/* Cancel button */}
+      {!generatedToken && (
+        <button
+          disabled={printing}
+          onClick={() => {
+            setShowModal(false);
+            setPhoneNumber("");
+            setCursorIndex(0);
+            setSelectedCard(null);
+            setGeneratedToken(null);
+            setPrintFailed(false);
+          }}
+          className="mt-4 px-6 py-2 rounded-xl bg-red-500 text-white text-lg font-semibold"
+        >
+          Cancel
+        </button>
+      )}
+    </div>
+  </div>
+)}
+ 
     </div>
   );
 };
+ 
 
 export default Kiosk;

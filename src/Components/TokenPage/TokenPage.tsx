@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation} from "react-router-dom";
 import { useEffect, useState } from "react";
 import logo from "../../assets/Utkal_BW_Logo.png";
 
@@ -10,7 +10,7 @@ interface Subcategory {
 
 const TokenPage = () => {
   const location = useLocation();
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   const { subcategory, tokenResponse } =
     (location.state as {
@@ -33,16 +33,16 @@ const TokenPage = () => {
     }
   }, [tokenResponse]);
 
-  useEffect(() => {
-    if (!subcategory) return;
+  // useEffect(() => {
+  //   if (!subcategory) return;
 
-    setTimeout(() => window.print(), 300);
+  //   setTimeout(() => window.print(), 300);
 
-    const afterPrint = () => navigate("/Kiosk");
-    window.addEventListener("afterprint", afterPrint);
+  //   const afterPrint = () => navigate("/Kiosk");
+  //   window.addEventListener("afterprint", afterPrint);
 
-    return () => window.removeEventListener("afterprint", afterPrint);
-  }, [subcategory, navigate]);
+  //   return () => window.removeEventListener("afterprint", afterPrint);
+  // }, [subcategory, navigate]);
 
   if (!subcategory) return null;
 
