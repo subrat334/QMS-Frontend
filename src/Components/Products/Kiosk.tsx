@@ -1365,14 +1365,15 @@ const Kiosk = () => {
                     className="w-[clamp(80px,15vw,200px)] h-auto object-contain"
                   />
 
-                  <div className="mt-4 text-center">
-                    <div className="text-1xl font-bold text-green-700">
-                      (Welcome to Utkal Hospital, Bhubaneswar)
-                    </div>
-                    <div className="text-1x1 font-bold text-green-800 mt-1">
-                      (To generate token click on the below button)
-                    </div>
-                  </div>
+                 <div className="mt-4 text-center">
+                <div className="font-bold text-green-700 text-[17px]">
+                  Welcome to Utkal Hospital, Bhubaneswar
+                </div>
+                <div className="font-bold text-green-800 mt-1 text-[15px]">
+                  (To generate token click on the below button)
+                </div>
+              </div>
+
                 </div>
 
         {/* Service Cards */}

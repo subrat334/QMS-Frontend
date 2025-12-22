@@ -49,6 +49,27 @@ const ManageTokens = () => {
 
   const counterRef = useRef(selectedCounter);
 
+  const normalizeStatus = (status: string) => {
+  switch (status.trim().toUpperCase()) {
+    case "WAIT A WHILE":
+      return "Wait a while";
+    case "CALLING":
+      return "CALLING";
+    case "IN PROGRESS":
+      return "IN PROGRESS";
+    case "HOLD":
+      return "HOLD";
+    case "CANCELLED":
+    case "CANCEL":
+      return "Cancelled";
+    case "DONE":
+      return "DONE";
+    default:
+      return "Wait a while";
+  }
+};
+
+
   useEffect(() => {
     console.log("[USE EFFECT] selectedCounter changed:", selectedCounter);
     counterRef.current = selectedCounter;
@@ -188,7 +209,7 @@ const ManageTokens = () => {
           subcategoryId: String(t.SubCategoryId),
           subcategory: t.SubCategoryName,
           counterId: String(t.CounterId),
-          status: statusText,
+          status: normalizeStatus(statusText),
           hold: t.StatusId === TOKEN_STATUS.HOLD,
           mobile: t.MobileNumber,
           createdOn: t.CreatedOn,
@@ -268,70 +289,60 @@ useEffect(() => {
   });
 
   // STATUS UPDATE
-  hub.on("receiveTokenStatus", (data: any) => {
-    console.log("[SIGNALR] receiveTokenStatus RAW:", data);
+ hub.on("receiveTokenStatus", (data: any) => {
+  const tokenStatus = data?.A ? data.A[0] : data;
+  if (!tokenStatus?.Token) return;
 
-    const tokenStatus = data.A ? data.A[0] : data;
-    console.log("[SIGNALR] Parsed Status:", tokenStatus);
+setTokenData((prev) => {
+  return prev
+    .map((t) => {
+      if (t.number !== tokenStatus.Token) return t;
 
-    if (!tokenStatus?.Token) {
-      console.log("[SIGNALR] Invalid status update payload");
-      return;
-    }
+      let newStatus = t.status;
 
-    setTokenData((prev) => {
-      console.log("[SIGNALR] Updating token status in state...");
+      if (tokenStatus.StatusId === TOKEN_STATUS.PENDING)
+        newStatus = "WAIT A WHILE";
+      else if (tokenStatus.StatusId === TOKEN_STATUS.CALL)
+        newStatus = "CALLING";
+      else if (tokenStatus.StatusId === TOKEN_STATUS.INPROGRESS)
+        newStatus = "IN PROGRESS";
+      else if (tokenStatus.StatusId === TOKEN_STATUS.HOLD)
+        newStatus = "HOLD";
+      else if (tokenStatus.StatusId === TOKEN_STATUS.RECALL)
+        newStatus = "CALLING";
+      else if (tokenStatus.StatusId === TOKEN_STATUS.CANCEL)
+        newStatus = "Cancelled";
+      else if (tokenStatus.StatusId === TOKEN_STATUS.DONE)
+        newStatus = "DONE";
 
-      return prev
-        .map((t) => {
-          if (t.number === tokenStatus.Token) {
-            console.log("[SIGNALR] Updating matching token:", t);
+      const normalizedStatus = normalizeStatus(newStatus); // ✅ KEY FIX
 
-            return {
-              ...t,
-             status:
-            tokenStatus.StatusId === TOKEN_STATUS.PENDING
-              ? "WAIT A WHILE"
-              : tokenStatus.StatusId === TOKEN_STATUS.CALL
-              ? "CALLING"
-              : tokenStatus.StatusId === TOKEN_STATUS.INPROGRESS
-              ? "IN PROGRESS"
-              : tokenStatus.StatusId === TOKEN_STATUS.HOLD
-              ? "HOLD"
-              : tokenStatus.StatusId === TOKEN_STATUS.RECALL
-              ? "CALLING"
-              : tokenStatus.StatusId === TOKEN_STATUS.DONE
-              ? "DONE"
-              : tokenStatus.StatusId === TOKEN_STATUS.CANCEL
-              ? "Cancelled"
-              : t.status,
-                        counterId: String(tokenStatus.CounterId),
-              hold: tokenStatus.StatusId === TOKEN_STATUS.HOLD,
-            };
-          }
-          return t;
-        })
+      return {
+        ...t,
+        status: normalizedStatus,
+        counterId: String(tokenStatus.CounterId),
+        hold: tokenStatus.StatusId === TOKEN_STATUS.HOLD,
+      };
+    })
+    .filter((t) => {
+      // ❌ Remove DONE tokens
+      if (t.status === "DONE") return false;
 
-        // 🔥 FIXED FILTER — DO NOT DELETE CALL TOKENS
-        .filter((t) => {
-  // Only remove the token that just changed
-  if (t.number === tokenStatus.Token) {
+      // ❌ Remove token from other counters when CALLING / IN PROGRESS
+      if (
+        (t.status === "CALLING" || t.status === "IN PROGRESS") &&
+        t.counterId !== String(selectedCounter)
+      ) {
+        return false;
+      }
 
-    // Remove DONE
-    if (t.status === "DONE") return false;
-
-    // Remove CALL if for another counter
-    if (t.status === "CALL" && t.counterId !== String(selectedCounter)) {
-      return false;
-    }
-  }
-
-  // Keep all other tokens untouched
-  return true;
-});
-;
+      return true;
     });
-  });
+});
+});
+
+// });
+
 
   // START CONNECTION
   connection

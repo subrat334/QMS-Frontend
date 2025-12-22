@@ -7,6 +7,9 @@ import {
   UserCog,
   Eye,
   EyeOff,
+  Key,
+  ChevronRight
+  
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { API } from "../../services/AllApiServices";
@@ -721,31 +724,31 @@ const isPasswordValid =
 
   const isEditMode = !!editUserId;
 
-      const handleToggleUserStatus = async (
-        userId: string,
-        currentStatus?: boolean
-      ) => {
-        const newStatus = !(currentStatus ?? true);
+      // const handleToggleUserStatus = async (
+      //   userId: string,
+      //   currentStatus?: boolean
+      // ) => {
+      //   const newStatus = !(currentStatus ?? true);
 
-        try {
-          await API.updateUserActiveStatus(userId, newStatus);
+      //   try {
+      //     await API.updateUserActiveStatus(userId, newStatus);
 
-          setUsers(prevUsers =>
-            prevUsers.map(user =>
-              user.UserId === userId
-                ? { ...user, IsActive: newStatus }
-                : user
-            )
-          );
+      //     setUsers(prevUsers =>
+      //       prevUsers.map(user =>
+      //         user.UserId === userId
+      //           ? { ...user, IsActive: newStatus }
+      //           : user
+      //       )
+      //     );
 
-          toast.success(
-            `User ${newStatus ? "activated" : "deactivated"}`
-          );
-        } catch (error) {
-          console.error(error);
-          toast.error("Failed to update user status");
-        }
-      };
+      //     toast.success(
+      //       `User ${newStatus ? "activated" : "deactivated"}`
+      //     );
+      //   } catch (error) {
+      //     console.error(error);
+      //     toast.error("Failed to update user status");
+      //   }
+      // };
 
 
 
@@ -1207,9 +1210,19 @@ const isPasswordValid =
                   onClick={() => toggleAccordion(u.UserId)}
                 >
                   {/* Expand Icon */}
-                  <td className="px-4 py-3 text-green-700 font-bold">
+                  {/* <td className="px-4 py-3 text-green-700 font-bold">
                     {isExpanded ? "▼" : "▶"}
-                  </td>
+                  </td> */}
+                  <td className="px-4 py-3">
+                  <div
+                    className={`flex items-center justify-center transition-transform duration-200
+                      ${isExpanded ? "rotate-90 text-green-700" : "text-gray-500"}
+                    `}
+                  >
+                    <ChevronRight size={18} />
+                  </div>
+                </td>
+
 
                   {/* Name */}
                   <td className="px-6 py-3 font-semibold text-green-800">
@@ -1289,7 +1302,7 @@ const isPasswordValid =
                             : "Inactive users cannot update password"
                         }
                       >
-                        <Eye size={16} />
+                        <Key size={16} />
                       </button>
 
 
