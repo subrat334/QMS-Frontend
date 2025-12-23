@@ -1224,59 +1224,107 @@ const silentPrint = async (
   };
 
   // Confirm Token
-  const handleConfirm = async () => {
-    if (!selectedCard) return;
+//   const handleConfirm = async () => {
+//     if (!selectedCard) return;
 
-    const regex = /^[6-9]\d{9}$/;
-    if (!regex.test(phoneNumber)) {
-      toast.error("Enter valid 10-digit mobile number");
-      return;
-    }
+//     const regex = /^[6-9]\d{9}$/;
+//     if (!regex.test(phoneNumber)) {
+//       toast.error("Enter valid 10-digit mobile number");
+//       return;
+//     }
 
-    // if (!selectedCard.counters?.length) {
-    //   toast.error("No counters assigned to this subcategory");
-    //   return;
-    // }
+//     // if (!selectedCard.counters?.length) {
+//     //   toast.error("No counters assigned to this subcategory");
+//     //   return;
+//     // }
 
-    // setLoadingToken(true);
+//     // setLoadingToken(true);
 
-     setPrinting(true);
+//      setPrinting(true);
 
-    try {
-      const payload = {
-        CategoryId: selectedCard.categoryId,
-        SubCategoryId: selectedCard.id,
-        MobileNumber: phoneNumber,
-        DeliveryMethod: "Counter",
-      };
+//     try {
+//       const payload = {
+//         CategoryId: selectedCard.categoryId,
+//         SubCategoryId: selectedCard.id,
+//         MobileNumber: phoneNumber,
+//         DeliveryMethod: "Counter",
+//       };
 
-     const res = await api.post("/Patient/generateToken", payload);
+//      const res = await api.post("/Patient/generateToken", payload);
+//     const token = res.data?.Token;
+//     const now = new Date().toLocaleString("en-GB", { hour12: false });
+ 
+//     // 2️⃣ Attempt silent print
+//     const printResult = await silentPrint(selectedCard.name, token, now);
+ 
+//     if (!printResult.printed) {
+//       // Print failed → show token to user
+//       setGeneratedToken(token);
+//       setPrintFailed(true);
+//     } else {
+//       // Print succeeded → auto-close modal
+//       setShowModal(false);
+//       setPhoneNumber("");
+//       setCursorIndex(0);
+//       setSelectedCard(null);
+//       setGeneratedToken(null);
+//       setPrintFailed(false);
+//     }
+//   } catch (err) {
+//     // API failure → show toast (staff only), patient sees nothing broken
+//     toast.error("Unable to generate token");
+//   } finally {
+//     setPrinting(false);
+//   }
+// };
+const handleConfirm = async () => {
+  if (!selectedCard) return;
+
+  const regex = /^[6-9]\d{9}$/;
+  if (!regex.test(phoneNumber)) {
+    toast.error("Enter valid 10-digit mobile number");
+    return;
+  }
+
+  setPrinting(true);
+
+  try {
+    const payload = {
+      CategoryId: selectedCard.categoryId,
+      SubCategoryId: selectedCard.id,
+      MobileNumber: phoneNumber,
+      DeliveryMethod: "Counter",
+    };
+
+    const res = await api.post("/Patient/generateToken", payload);
     const token = res.data?.Token;
     const now = new Date().toLocaleString("en-GB", { hour12: false });
- 
-    // 2️⃣ Attempt silent print
+
+    // Attempt silent print
     const printResult = await silentPrint(selectedCard.name, token, now);
- 
+
     if (!printResult.printed) {
-      // Print failed → show token to user
+      // ❌ Print failed → show token
       setGeneratedToken(token);
       setPrintFailed(true);
     } else {
-      // Print succeeded → auto-close modal
-      setShowModal(false);
-      setPhoneNumber("");
-      setCursorIndex(0);
-      setSelectedCard(null);
-      setGeneratedToken(null);
-      setPrintFailed(false);
+      // ✅ Print success → brief confirmation then close
+      setTimeout(() => {
+        setShowModal(false);
+        setPhoneNumber("");
+        setCursorIndex(0);
+        setSelectedCard(null);
+        setGeneratedToken(null);
+        setPrintFailed(false);
+      }, 800); // ⏱ small UX delay
     }
   } catch (err) {
-    // API failure → show toast (staff only), patient sees nothing broken
     toast.error("Unable to generate token");
   } finally {
     setPrinting(false);
   }
 };
+
  
 
   return (
@@ -1471,6 +1519,21 @@ const silentPrint = async (
    {showModal && (
   <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50">
     <div className="bg-white rounded-3xl shadow-2xl w-[350px] p-6 relative flex flex-col items-center">
+      {/* ---------- LOADER ---------- */}
+{printing && (
+  <div className="absolute inset-0 bg-white/90 rounded-3xl flex flex-col 
+                  justify-center items-center z-50">
+    <div className="w-14 h-14 border-4 border-green-300 
+                    border-t-green-600 rounded-full animate-spin mb-4" />
+    <p className="text-lg font-semibold text-green-700">
+      Please wait…
+    </p>
+    <p className="text-sm text-gray-500 mt-1">
+      Token is being generated
+    </p>
+  </div>
+)}
+
       <h2 className="text-2xl font-bold text-green-700 mb-4 text-center">
         {selectedCard?.name || ""}
       </h2>
@@ -1516,7 +1579,10 @@ const silentPrint = async (
  
       {/* Number Pad */}
       {!generatedToken && (
-        <div className="grid grid-cols-3 w-full rounded-2xl overflow-hidden shadow-xl border border-green-200 bg-linear-to-b from-green-50 to-teal-50">
+        // <div className="grid grid-cols-3 w-full rounded-2xl overflow-hidden shadow-xl border border-green-200 bg-linear-to-b from-green-50 to-teal-50">
+        <div className="grid grid-cols-3 gap-px w-full rounded-2xl overflow-hidden shadow-xl 
+                bg-green-300 border border-green-300">
+
           {["1","2","3","4","5","6","7","8","9","←","0","✔"].map((num) => (
             <button
               key={num}
