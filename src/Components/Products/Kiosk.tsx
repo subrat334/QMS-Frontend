@@ -1454,7 +1454,7 @@ const handleConfirm = async () => {
                   <img
                     src={logo}
                     alt="Hospital Logo"
-                    className="w-[clamp(80px,15vw,200px)] h-auto object-contain"
+                    className="w-[clamp(80px,15vw,200px)] h-auto object-contain mt-4"
                   />
 
                  <div className="mt-4 text-center">
@@ -1544,7 +1544,7 @@ const handleConfirm = async () => {
           <div className="text-lg font-semibold text-gray-700 mb-2">Token No</div>
           <div className="text-5xl font-extrabold text-green-700 bg-green-50 border-2 border-green-600 rounded-2xl py-6 mb-4">
             {generatedToken}
-          </div>
+  </div>
  
           <div className="text-sm text-gray-500">
             {new Date().toLocaleString("en-GB", { hour12: false })}
@@ -1564,10 +1564,12 @@ const handleConfirm = async () => {
           >
             OK
           </button>
-        </div>
-      )}
+  </div>
+)}
+
  
       {/* ---------- MOBILE INPUT ---------- */}
+      <div>Enter Your Mobile/Whatsapp Number</div>
       {!generatedToken && (
         <div
           className="w-full bg-gray-100 border text-center text-4xl font-semibold rounded-2xl py-4 mb-6 cursor-text relative"

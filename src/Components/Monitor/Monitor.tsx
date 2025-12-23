@@ -32,11 +32,12 @@ const Monitor: React.FC<MonitorProps> = ({ fullScreen, setFullScreen }) => {
   const [tokenData, setTokenData] = useState<Record<string, TokenData[]>>({});
   const [loadingCategories, setLoadingCategories] = useState(true);
   const HOSPITAL_INFO = {
-  name: "Utkal Hospital, Bhubaneswar",
+  name: "Utkal Healthcare Private Limited",
   logo: utkalLogo,
   address:
-    "Defence Colony Rd, Neeladri Vihar, Chandrasekharpur, Bhubaneswar, Odisha 751021",
-};
+    "Plot No.-C/3, Niladrivihar, Chandrasekharpur, Bhubaneswar-751021  ",
+    Ph:"6370704001/4002"
+}
 
 
   /* ✅ LOAD CATEGORIES FROM LOCAL STORAGE */
@@ -236,7 +237,7 @@ const Monitor: React.FC<MonitorProps> = ({ fullScreen, setFullScreen }) => {
     return (
       <div
         key={subcategory}
-        className={`bg-white rounded-2xl shadow-2xl ${
+        className={`bg-white rounded-1xl shadow-2xl ${
           isFullScreen ? "w-full h-full" : "w-64"
         } border-2 border-green-300 flex flex-col`}
       >
@@ -277,20 +278,20 @@ const Monitor: React.FC<MonitorProps> = ({ fullScreen, setFullScreen }) => {
     return (
       <tr
         key={i}
-        className={`border-b border-green-300 text-center font-bold ${rowBg}`}
+        className={`border-b border-green-300 text-center font-bold text-black ${rowBg}`}
       >
         {/* STATUS */}
-        <td className="p-2 text-center">
+        <td className="p-2 text-center bold text-black">
           {token.message}
         </td>
 
         {/* TOKEN NUMBER */}
-        <td className="p-2 text-center">
+        <td className="p-2 text-center bold text-black">
           {token.tokenNumber}
         </td>
 
         {/* COUNTER */}
-        <td className="p-2 text-center">
+        <td className="p-2 text-center bold text-black">
           {token.CounterName ?? "-"}
         </td>
       </tr>
@@ -352,6 +353,10 @@ const Monitor: React.FC<MonitorProps> = ({ fullScreen, setFullScreen }) => {
       <div className="bg-white text-black text-center py-1 px-4 border-t-4 border-green-500">
         <p className="text-lg font-semibold">
           {HOSPITAL_INFO.address}
+          {HOSPITAL_INFO.Ph && (
+          <span className="ml-8"> Ph.No: {HOSPITAL_INFO.Ph}</span>
+        )}
+
         </p>
       </div>
 
