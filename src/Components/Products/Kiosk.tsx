@@ -1309,7 +1309,7 @@ const handleConfirm = async () => {
       setPrintFailed(true);
     } else {
       // ✅ Print success → brief confirmation then close
-      setTimeout(() => {
+       setTimeout(() => {
         setShowModal(false);
         setPhoneNumber("");
         setCursorIndex(0);
