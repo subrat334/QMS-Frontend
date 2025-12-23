@@ -244,10 +244,11 @@ const Dashboard = () => {
 
     const handleUpdateSubcategory = async () => {
     try {
-      await API.addOrEditCategory({
-    CategoryId: editingCategoryId ?? undefined,
-    Categoryname: categoryName.trim(),
-    CategoryDescription: "",
+      await API.addOrEditSubCategory({
+    CategoryId: Number(selectedCategoryId),
+    Name: newSubcategoryName.trim(),
+    SubCategoryDescription: "",
+    Id: Number(editingSubcatId),
   });
 
       toast.success("Subcategory updated!");
