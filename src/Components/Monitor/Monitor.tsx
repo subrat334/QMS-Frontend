@@ -38,6 +38,7 @@ const Monitor: React.FC<MonitorProps> = ({ fullScreen, setFullScreen }) => {
     "Plot No.-C/3, Niladrivihar, Chandrasekharpur, Bhubaneswar-751021  ",
     Ph:"6370704001/4002"
 }
+  const MAX_ROWS_FULLSCREEN = 20;
 
 
   /* ✅ LOAD CATEGORIES FROM LOCAL STORAGE */
@@ -231,80 +232,71 @@ const Monitor: React.FC<MonitorProps> = ({ fullScreen, setFullScreen }) => {
     }
   }, [selectedSubcategories, categoryData]);
 
-  const renderTable = (subcategory: string, isFullScreen = false) => {
-    const tokens = tokenData[subcategory] || [];
+const renderTable = (subcategory: string, isFullScreen = false) => {
+  const tokens = tokenData[subcategory] || [];
 
-    return (
-      <div
-        key={subcategory}
-        className={`bg-white rounded-1xl shadow-2xl ${
-          isFullScreen ? "w-full h-full" : "w-64"
-        } border-2 border-green-300 flex flex-col`}
+  // ✅ LIMIT ROWS IN FULLSCREEN (NO SCROLL)
+  const displayTokens = isFullScreen
+    ? tokens.slice(0, MAX_ROWS_FULLSCREEN)
+    : tokens;
+
+  return (
+    <div className="bg-white shadow-2xl border-2 border-green-300 flex flex-col h-full w-full overflow-hidden">
+      
+      {/* HEADER */}
+      <h2
+        className={`font-bold text-green-800 border-b-2 border-green-200 bg-green-50 text-center ${
+          isFullScreen ? "text-2xl py-3" : "text-lg py-2"
+        }`}
       >
-       <h2
-  className={`font-bold text-green-800 mb-3 border-b-2 border-green-200 bg-green-50 rounded-t-2xl text-center ${
-    isFullScreen ? "text-2xl p-4" : "text-lg p-3"
-  }`}
->
-  {subcategory}
-</h2>
+        {subcategory}
+      </h2>
 
+      {/* BODY – NO SCROLL */}
+      <div className={`flex-1 p-2 ${isFullScreen ? "text-xl" : "text-sm"}`}>
+        {displayTokens.length === 0 ? (
+          <div className="text-center text-gray-500 py-6">
+            No tokens available
+          </div>
+        ) : (
+          <table className="w-full table-fixed">
+            <thead>
+              <tr className="bg-green-600 text-white">
+                <th className="p-2">Status</th>
+                <th className="p-2">Token No.</th>
+                <th className="p-2">Counter</th>
+              </tr>
+            </thead>
+            <tbody>
+              {displayTokens.map((token, i) => {
+                const rowBg =
+                  token.message === "INPROGRESS"
+                    ? "bg-green-200"
+                    : token.message === "CALLING"
+                    ? "bg-yellow-200"
+                    : token.message === "NEXT"
+                    ? "bg-blue-200"
+                    : "bg-pink-200";
 
-        <div className={`flex-1 overflow-auto p-2 ${isFullScreen ? "text-xl" : "text-sm"}`}>
-          {tokens.length === 0 ? (
-            <div className="text-center text-gray-500 py-6">
-              <p>No tokens available.</p>
-            </div>
-          ) : (
-            <table className="w-full">
-  <thead>
-    <tr className="bg-green-600 text-white">
-      <th className="p-2 font-semibold text-center">Status</th>
-      <th className="p-2 font-semibold text-center">Token No.</th>
-      <th className="p-2 font-semibold text-center">Counter</th>
-    </tr>
-  </thead>
-  <tbody>
-    {tokens.map((token, i) => {
-    const rowBg =
-      token.message === "INPROGRESS"
-        ? "bg-green-200"
-        : token.message === "CALLING"
-        ? "bg-yellow-200"
-        : token.message === "NEXT"
-        ? "bg-blue-200"
-        : "bg-pink-200";
+                return (
+                  <tr
+                    key={i}
+                    className={`border-b text-center font-bold text-black ${rowBg}`}
+                  >
+                    <td className="p-2 text-black">{token.message}</td>
+                    <td className="p-2 text-black">{token.tokenNumber}</td>
+                    <td className="p-2 text-black">{token.CounterName ?? "-"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
 
-    return (
-      <tr
-        key={i}
-        className={`border-b border-green-300 text-center font-bold text-black ${rowBg}`}
-      >
-        {/* STATUS */}
-        <td className="p-2 text-center bold text-black">
-          {token.message}
-        </td>
-
-        {/* TOKEN NUMBER */}
-        <td className="p-2 text-center bold text-black">
-          {token.tokenNumber}
-        </td>
-
-        {/* COUNTER */}
-        <td className="p-2 text-center bold text-black">
-          {token.CounterName ?? "-"}
-        </td>
-      </tr>
-    );
-  })}
-  </tbody>
-</table>
-
-          )}
-        </div>
+        )}
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   /* ✅ FULL SCREEN MODE */
  if (fullScreen) {
@@ -330,7 +322,7 @@ const Monitor: React.FC<MonitorProps> = ({ fullScreen, setFullScreen }) => {
 
 
       {/* 🔷 MAIN CONTENT (TABLES) */}
-      <div className="flex-1 overflow-hidden">
+      {/* <div className="flex-1 overflow-hidden">
         <div className="grid grid-cols-2 gap-0 h-full">
           {selectedSubcategories.map((sub, index) => {
             const isLast =
@@ -347,7 +339,43 @@ const Monitor: React.FC<MonitorProps> = ({ fullScreen, setFullScreen }) => {
             );
           })}
         </div>
-      </div>
+      </div> */}
+    <div className="flex-1 overflow-hidden">
+  <div
+    className={`grid h-full ${
+      selectedSubcategories.length === 1
+        ? "grid-cols-1"
+        : "grid-cols-2"
+    }`}
+    style={{
+      gridTemplateRows:
+        selectedSubcategories.length <= 2
+          ? "1fr"
+          : selectedSubcategories.length <= 4
+          ? "1fr 1fr"
+          : "1fr 1fr 1fr",
+    }}
+  >
+    {selectedSubcategories.map((sub, index) => {
+      const total = selectedSubcategories.length;
+
+      const isFullWidth =
+        (total === 3 && index === 2) ||
+        (total === 5 && index === 4);
+
+      return (
+        <div
+          key={sub}
+          className={`h-full min-h-0 ${
+            isFullWidth ? "col-span-2" : ""
+          }`}
+        >
+          {renderTable(sub, true)}
+        </div>
+      );
+    })}
+  </div>
+</div>
 
       {/* 🔷 FOOTER */}
       <div className="bg-white text-black text-center py-1 px-4 border-t-4 border-green-500">

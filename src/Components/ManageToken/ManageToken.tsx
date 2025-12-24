@@ -245,6 +245,7 @@ useEffect(() => {
   console.log("[SIGNALR] Creating hub connection...");
   const connection = ($ as any).hubConnection(
     "http://10.0.0.25/backend/signalr/hubs",
+    // "http://13.202.228.79/backend/signalr/hubs",
     { useDefaultPath: false }
   );
   const hub = connection.createHubProxy("notificationHub");
