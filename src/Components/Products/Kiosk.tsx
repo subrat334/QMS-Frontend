@@ -1569,15 +1569,30 @@ const handleConfirm = async () => {
 
  
       {/* ---------- MOBILE INPUT ---------- */}
-      <div>Enter Your Mobile/Whatsapp Number</div>
-      {!generatedToken && (
-        <div
-          className="w-full bg-gray-100 border text-center text-4xl font-semibold rounded-2xl py-4 mb-6 cursor-text relative"
-          onClick={handleTextClick}
-        >
-          {renderPhoneNumber()}
-        </div>
-      )}
+      {/* <div>Enter Your Mobile/Whatsapp Number</div> */}
+   {/* ---------- MOBILE INPUT ---------- */}
+
+{!generatedToken && (
+<>
+<div className="text-lg font-semibold text-gray-700 mb-2 text-center">
+
+      Enter your mobile number
+</div>
+ 
+    <div
+
+      className="w-full bg-gray-100 border text-center text-4xl font-semibold rounded-2xl py-4 mb-6 cursor-text relative"
+
+      onClick={handleTextClick}
+>
+
+      {renderPhoneNumber()}
+</div>
+</>
+
+)}
+
+ 
  
       {/* Number Pad */}
       {!generatedToken && (

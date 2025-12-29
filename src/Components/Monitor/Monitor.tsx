@@ -378,11 +378,11 @@ const renderTable = (subcategory: string, isFullScreen = false) => {
 </div>
 
       {/* 🔷 FOOTER */}
-      <div className="bg-white text-black text-center py-1 px-4 border-t-4 border-green-500">
+      <div className=" bg-green-700 text-black text-center py-1 px-4 border-t-4 border-green-500">
         <p className="text-lg font-semibold">
           {HOSPITAL_INFO.address}
           {HOSPITAL_INFO.Ph && (
-          <span className="ml-8"> Ph.No: {HOSPITAL_INFO.Ph}</span>
+          <span className="ml-2"> Ph.No: {HOSPITAL_INFO.Ph}</span>
         )}
 
         </p>
