@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import { API } from "../../services/AllApiServices";
 // import { useAuth } from "../../context/AuthContext";
 import { TOKEN_STATUS } from "../../constants/AllConstants";
+import { SIGNALR_URLS } from "../../constants/AllConstants";
 
 declare var jQuery: any;
 
@@ -46,6 +47,9 @@ const ManageTokens = () => {
 
   // const { user, privileges, ensurePrivilegesForUser } = useAuth();
   const [categories, setCategories] = useState<RawCategory[]>([]);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [tokenToCancel, setTokenToCancel] = useState<number | null>(null);
+
 
   const counterRef = useRef(selectedCounter);
 
@@ -68,6 +72,11 @@ const ManageTokens = () => {
       return "Wait a while";
   }
 };
+  const confirmCancel = (id: number) => {
+    setTokenToCancel(id);
+    setShowConfirm(true);
+  };
+
 
 
   useEffect(() => {
@@ -243,9 +252,10 @@ useEffect(() => {
   }
 
   console.log("[SIGNALR] Creating hub connection...");
+ const CURRENT_SIGNALR_URL = SIGNALR_URLS.LOCAL;   // or SIGNALR_URLS.LIVE
+
   const connection = ($ as any).hubConnection(
-    "http://10.0.0.25/backend/signalr/hubs",
-    // "http://13.202.228.79/backend/signalr/hubs",
+  CURRENT_SIGNALR_URL,
     { useDefaultPath: false }
   );
   const hub = connection.createHubProxy("notificationHub");
@@ -326,10 +336,10 @@ setTokenData((prev) => {
       };
     })
     .filter((t) => {
-      // ❌ Remove DONE tokens
+      //  Remove DONE tokens
       if (t.status === "DONE") return false;
 
-      // ❌ Remove token from other counters when CALLING / IN PROGRESS
+      //  Remove token from other counters when CALLING / IN PROGRESS
       if (
         (t.status === "CALLING" || t.status === "IN PROGRESS") &&
         t.counterId !== String(selectedCounter)
@@ -401,6 +411,17 @@ setTokenData((prev) => {
   // ------------------------------------------
   const handleCallPatient = async (id: number) => {
     console.log("[HANDLE CALL] Triggered for ID:", id);
+  //  Check if another token is already CALLING
+  const alreadyCalling = tokenData.some(
+    (t) => t.status === "CALLING" && t.id !== id
+  );
+
+  if (alreadyCalling) {
+    alert(
+      "A token is already in CALLING state. Please Hold or Cancel it before calling another token."
+    );
+    return;
+  }
 
     const token = tokenData.find((t) => t.id === id);
     if (!token) return;
@@ -658,7 +679,7 @@ setTokenData((prev) => {
 
                               <button
                                 className="bg-red-600 text-white px-3 py-1 rounded"
-                                onClick={() => handleCancel(token.id)}
+                                onClick={() => confirmCancel(token.id)}
                               >
                                 Cancel
                               </button>
@@ -691,7 +712,7 @@ setTokenData((prev) => {
 
                                 <button
                                   className="bg-red-600 text-white px-3 py-1 rounded"
-                                  onClick={() => handleCancel(token.id)}
+                                  onClick={() =>confirmCancel(token.id)}
                                 >
                                   Cancel
                                 </button>
@@ -717,7 +738,7 @@ setTokenData((prev) => {
 
                               <button
                                 className="bg-red-600 text-white px-3 py-1 rounded"
-                                onClick={() => handleCancel(token.id)}
+                                onClick={() => confirmCancel(token.id)}
                               >
                                 Cancel
                               </button>
@@ -734,8 +755,15 @@ setTokenData((prev) => {
                             {/* PENDING */}
                           {token.status === "Wait a while" && (
                             <button
-                              className="bg-green-700 text-white px-3 py-1 rounded"
                               onClick={() => handleCallPatient(token.id)}
+                        disabled={tokenData.some(t => t.status === "CALLING" && t.id !== token.id)}
+                        className={`px-3 py-1 rounded 
+                          ${
+                            tokenData.some(t => t.status === "CALLING" && t.id !== token.id)
+                              ? "bg-gray-400 cursor-not-allowed"
+                              : "bg-green-700 text-white"
+                          }
+                        `}
                             >
                               Call
                             </button>
@@ -754,6 +782,40 @@ setTokenData((prev) => {
           </div>
         )}
       </div>
+      {showConfirm && (
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl shadow-lg p-6 w-[320px]">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          Do you really want to cancel the Token No.?
+          </h3>
+
+          <div className="flex justify-end gap-3">
+            <button
+              className="px-4 py-1 rounded bg-gray-300"
+              onClick={() => {
+                setShowConfirm(false);
+                setTokenToCancel(null);
+              }}
+            >
+              No
+            </button>
+
+            <button
+              className="px-4 py-1 rounded bg-red-600 text-white"
+              onClick={() => {
+                if (tokenToCancel !== null) {
+                  handleCancel(tokenToCancel);   //  call actual cancel
+                }
+                setShowConfirm(false);
+                setTokenToCancel(null);
+              }}
+            >
+              Yes, Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     </div>
   );
 };

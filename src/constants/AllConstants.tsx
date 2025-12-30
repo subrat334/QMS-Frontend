@@ -59,6 +59,19 @@ export type TokenStatusType = typeof TOKEN_STATUS[keyof typeof TOKEN_STATUS];
  
 // Type for consecutive basis
 export type ConsecutiveBasisType = typeof CONSECUTIVE_BASIS[keyof typeof CONSECUTIVE_BASIS];
- 
+// API URL CONSTANTS
+// ------------------------------------------
+export const API_URLS = {
+  LOCAL: "http://10.0.0.25/backend/api/",
+  DEV: "https://angular-dev.smaketsolutions.com/backend/api",
+} as const;
+
+// SIGNALR HUB URL CONSTANTS
+// ------------------------------------------
+export const SIGNALR_URLS = {
+  LOCAL: "http://10.0.0.25/backend/signalr/hubs",
+  DEV: "http://13.202.228.79/backend/signalr/hubs",
+} as const;
+
 // API Base URL
 export const API_BASE_URL = "http://13.202.228.79/backend/api";

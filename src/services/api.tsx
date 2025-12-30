@@ -1,11 +1,13 @@
 // api.tsx
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { API_URLS } from "../constants/AllConstants";
 
 // Create axios instance
-const api = axios.create({
-  baseURL: "http://10.0.0.25/backend/api/",
-  //  baseURL: "https://angular-dev.smaketsolutions.com/backend/api",
+const CURRENT_API_URL = API_URLS.LOCAL;   // or API_URLS.DEV
+
+export const api = axios.create({
+  baseURL: CURRENT_API_URL,
   headers: { "Content-Type": "application/json" },
 });
 
@@ -49,13 +51,26 @@ api.interceptors.response.use(
   }
 );
 
+// export function logoutUser() {
+//   toast.error("Session expired. Please login again.");
+
+//   localStorage.clear();
+
+//   // Redirect to login
+//   window.location.href = "/";
+// }
+
 export function logoutUser() {
+  console.log("LOGOUT FIRED"); // debug
   toast.error("Session expired. Please login again.");
 
-  localStorage.clear();
+  localStorage.removeItem("AccessToken");
+  localStorage.removeItem("RefreshToken");
+  localStorage.removeItem("AppUser");
+  localStorage.removeItem("UserPrivileges");
 
-  // Redirect to login
   window.location.href = "/";
 }
+
 
 export default api;
