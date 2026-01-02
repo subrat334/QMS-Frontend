@@ -29,7 +29,14 @@ type TokenItem = {
   number: string;
   status: string;
   hold?: boolean;
-};
+  };
+
+  type SelectedToken = {
+    Token: string;
+    CategoryId: number;
+    SubCategoryId: number;
+    CounterId: number;
+  };
 
 const $ = (window as any).jQuery;
 
@@ -47,8 +54,11 @@ const ManageTokens = () => {
 
   // const { user, privileges, ensurePrivilegesForUser } = useAuth();
   const [categories, setCategories] = useState<RawCategory[]>([]);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [tokenToCancel, setTokenToCancel] = useState<number | null>(null);
+  const [showCancelPopup, setShowCancelPopup] = useState(false);
+  const [cancelRemarks, setCancelRemarks] = useState("");
+  const [cancelError, setCancelError] = useState("");
+  // const [selectedToken, setSelectedToken] = useState(null);
+  const [selectedToken, setSelectedToken] =useState<SelectedToken | null>(null);
 
 
   const counterRef = useRef(selectedCounter);
@@ -72,12 +82,42 @@ const ManageTokens = () => {
       return "Wait a while";
   }
 };
-  const confirmCancel = (id: number) => {
-    setTokenToCancel(id);
-    setShowConfirm(true);
+  
+  const handleConfirmCancel = async () => {
+    if (!selectedToken) return;
+
+    if (!cancelRemarks.trim()) {
+      setCancelError("Remarks is required to cancel the token");
+      return;
+    }
+
+    try {
+      // Call API to update status
+      await API.updateTokenStatus({
+        CategoryId: selectedToken.CategoryId,
+        SubCategoryId: selectedToken.SubCategoryId,
+        // CounterId: selectedToken.CounterId,
+        CounterId: Number(selectedCounter),
+        Token: selectedToken.Token,
+        StatusId: 4, // Assuming 4 = Cancelled
+        Remarks: cancelRemarks
+      });
+
+      // Update the token in frontend to "Cancelled"
+      setTokenData((prev) =>
+        prev.map((t) =>
+          t.number === selectedToken.Token ? { ...t, status: "Cancelled" } : t
+        )
+      );
+
+      // Close modal and reset remarks
+      setShowCancelPopup(false);
+      setCancelRemarks("");
+
+    } catch (err) {
+      console.error(err);
+    }
   };
-
-
 
   useEffect(() => {
     console.log("[USE EFFECT] selectedCounter changed:", selectedCounter);
@@ -491,20 +531,17 @@ setTokenData((prev) => {
 };
 ;
 
-  const handleCancel = async (id: number) => {
-    console.log("[HANDLE CANCEL] ID:", id);
+  const handleCancelClick = (token: TokenItem) => {
+    setSelectedToken({
+      Token: token.number,
+      CategoryId: Number(token.categoryId),
+      SubCategoryId: Number(token.subcategoryId),
+      CounterId: Number(token.counterId),
+    });
 
-    const token = tokenData.find((t) => t.id === id);
-    console.log("[HANDLE CANCEL] Found:", token);
-    if (!token) return;
-
-    await sendTokenStatusUpdate(token, "CANCEL");
-
-    setCalledTokens((prev) => prev.filter((t) => t !== id));
-    setTokenData((prev) =>
-      prev.map((t) =>t.id === id ? { ...t, status: "Cancelled" } : t
-    )
-  );
+    setCancelRemarks("");
+    setCancelError("");
+    setShowCancelPopup(true);
   };
 
   const handleProcessDone = async (id: number) => {
@@ -533,6 +570,9 @@ setTokenData((prev) => {
   const canShowTable =
     selectedCategory && selectedSubcategory && selectedCounter;
 
+//     const isAnotherTokenActive = tokenData.some(
+//   t => t.status === "CALLING" || t.status === "IN PROGRESS"
+// );
   // ------------------------------------------
   // UI
   // ------------------------------------------
@@ -679,7 +719,7 @@ setTokenData((prev) => {
 
                               <button
                                 className="bg-red-600 text-white px-3 py-1 rounded"
-                                onClick={() => confirmCancel(token.id)}
+                               onClick={() => handleCancelClick(token)}
                               >
                                 Cancel
                               </button>
@@ -712,7 +752,7 @@ setTokenData((prev) => {
 
                                 <button
                                   className="bg-red-600 text-white px-3 py-1 rounded"
-                                  onClick={() =>confirmCancel(token.id)}
+                                  onClick={() => handleCancelClick(token)}
                                 >
                                   Cancel
                                 </button>
@@ -738,7 +778,8 @@ setTokenData((prev) => {
 
                               <button
                                 className="bg-red-600 text-white px-3 py-1 rounded"
-                                onClick={() => confirmCancel(token.id)}
+                                onClick={() => handleCancelClick(token)
+}
                               >
                                 Cancel
                               </button>
@@ -753,21 +794,21 @@ setTokenData((prev) => {
                           )}
 
                             {/* PENDING */}
-                          {token.status === "Wait a while" && (
-                            <button
-                              onClick={() => handleCallPatient(token.id)}
-                        disabled={tokenData.some(t => t.status === "CALLING" && t.id !== token.id)}
-                        className={`px-3 py-1 rounded 
-                          ${
-                            tokenData.some(t => t.status === "CALLING" && t.id !== token.id)
-                              ? "bg-gray-400 cursor-not-allowed"
-                              : "bg-green-700 text-white"
-                          }
-                        `}
-                            >
-                              Call
-                            </button>
-                          )}
+                        
+                         {token.status === "Wait a while" && (
+                          <button
+                            onClick={() => handleCallPatient(token.id)}
+                            disabled={tokenData.some(t => t.status === "CALLING" || t.status === "IN PROGRESS")}
+                            className={`px-3 py-1 rounded ${
+                              tokenData.some(t => t.status === "CALLING" || t.status === "IN PROGRESS")
+                                ? "bg-gray-400 cursor-not-allowed"
+                                : "bg-green-700 text-white"
+                            }`}
+                          >
+                            Call
+                          </button>
+                        )}
+
                         </td>
                       </tr>
                     ))
@@ -782,40 +823,51 @@ setTokenData((prev) => {
           </div>
         )}
       </div>
-      {showConfirm && (
-      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-        <div className="bg-white rounded-xl shadow-lg p-6 w-[320px]">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          Do you really want to cancel the Token No.?
-          </h3>
+  
+    {showCancelPopup && (
+  <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50">
+    <div className="bg-white rounded-2xl p-5 w-[380px]">
+      <h2 className="text-lg font-semibold mb-3 text-red-600">
+        Cancel Token Confirmation
+      </h2>
 
-          <div className="flex justify-end gap-3">
-            <button
-              className="px-4 py-1 rounded bg-gray-300"
-              onClick={() => {
-                setShowConfirm(false);
-                setTokenToCancel(null);
-              }}
-            >
-              No
-            </button>
+      <p className="text-sm mb-3">
+        Are you sure you want to cancel Token: 
+        <b> {selectedToken?.Token}</b> ?
+      </p>
 
-            <button
-              className="px-4 py-1 rounded bg-red-600 text-white"
-              onClick={() => {
-                if (tokenToCancel !== null) {
-                  handleCancel(tokenToCancel);   //  call actual cancel
-                }
-                setShowConfirm(false);
-                setTokenToCancel(null);
-              }}
-            >
-              Yes, Cancel
-            </button>
-          </div>
-        </div>
+      <label className="text-sm font-medium">Remarks (Required)</label>
+      <textarea
+        value={cancelRemarks}
+        onChange={(e) => setCancelRemarks(e.target.value)}
+        className="w-full border rounded-md p-2 mt-1"
+        rows={3}
+        placeholder="Enter reason for cancellation"
+      />
+
+      {cancelError && (
+        <p className="text-red-600 text-xs mt-1">{cancelError}</p>
+      )}
+
+      <div className="flex justify-end gap-2 mt-4">
+        <button
+          onClick={() => setShowCancelPopup(false)}
+          className="px-3 py-1 rounded bg-gray-300"
+        >
+          Close
+        </button>
+
+        <button
+          onClick={handleConfirmCancel}
+          className="px-3 py-1 rounded bg-red-600 text-white"
+        >
+          Confirm Cancel
+        </button>
       </div>
-    )}
+    </div>
+  </div>
+)}
+
     </div>
   );
 };
