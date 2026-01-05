@@ -321,13 +321,66 @@ const DatewiseReport = () => {
   // const [filterDate, setFilterDate] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [subcategoryFilter, setSubcategoryFilter] = useState("");
+  const [userFilter, setUserFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const uniqueCategories = Array.from(new Set(reports.map(r => r.category)));
+  const uniqueSubcategories = Array.from(new Set(reports.map(r => r.subcategory)));
+  const uniqueUsers = Array.from(new Set(reports.map(r => r.username)));
+  const uniqueStatuses = Array.from(new Set(reports.map(r => r.status)));
+  // const [reportType, setReportType] = useState<"summary" | "detailed">("summary");
+  
 
 
-  // const handleStatusChange = (id: number, newStatus: string) => {
-  //   setReports((prev) =>
-  //     prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r))
-  //   );
-  // };
+  interface HeaderFilterProps {
+    label: string;
+    value: string;
+    options: string[];
+    onChange: (value: string) => void;
+  }
+
+  const HeaderFilter = ({
+    label,
+    value,
+    options,
+    onChange,
+  }: HeaderFilterProps) => {
+    return (
+      <div className="flex flex-col items-center gap-1">
+        <span className="text-xs font-semibold tracking-wide">
+          {label}
+        </span>
+
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="
+            w-full
+            bg-white/90
+            text-gray-800
+            text-[11px]
+            px-2
+            py-1
+            rounded-md
+            border border-gray-300
+            shadow-sm
+            focus:outline-none
+            focus:ring-2 focus:ring-green-400
+            hover:border-green-400
+            transition
+          "
+        >
+          <option value="">All</option>
+          {options.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  };
 
   // Function to calculate TAT
   const calculateTAT = (start: string, end: string): string => {
@@ -366,25 +419,56 @@ const exportToExcel = () => {
   XLSX.writeFile(workbook, "Reports.xlsx");
 };
 
-  const filteredReports = reports.filter((r) => {
-  const recordDate = r.dateTime.substring(0, 10); 
+
+const filteredReports = reports.filter((r) => {
+  const recordDate = r.dateTime.substring(0, 10);
 
   if (fromDate && recordDate < fromDate) return false;
   if (toDate && recordDate > toDate) return false;
 
+  if (categoryFilter && r.category !== categoryFilter) return false;
+  if (subcategoryFilter && r.subcategory !== subcategoryFilter) return false;
+  if (userFilter && r.username !== userFilter) return false;
+  if (statusFilter && r.status !== statusFilter) return false;
+
   return true;
 });
+const formatDateTime24 = (value: string) => {
+  if (!value) return "-";
+  const d = new Date(value);
+  return d.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+};
+
+const formatTime24 = (value: string) => {
+  if (!value) return "-";
+  const d = new Date(`1970-01-01 ${value}`);
+  return d.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+};
+
 
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    // <div className="p-6 bg-gray-50 h-screen">
+    <div className="p-6 bg-gray-50 h-screen overflow-hidden flex flex-col">
+
       <h1 className="text-2xl font-semibold text-green-700 mb-6">
-         Date Wise Report
+        Date Wise Report
       </h1>
 
       {/* 🔹 Date Filter Input */}
       
-   <div className="mb-4 flex items-center justify-between">
+  <div className="mb-4 flex items-center justify-between">
 
   {/* LEFT SIDE — Calendar Filters */}
   <div className="flex items-center gap-4">
@@ -432,6 +516,14 @@ const exportToExcel = () => {
 
   {/* RIGHT SIDE — Buttons */}
   <div className="flex space-x-3">
+      {/* <select
+        value={reportType}
+        onChange={(e) => setReportType(e.target.value as "summary" | "detailed")}
+        className="border px-2 py-1 rounded text-sm"
+      >
+        <option value="summary">Summary Report</option>
+        <option value="detailed">Detailed Report</option>
+      </select> */}
     <button
       onClick={handlePrint}
       className="bg-blue-600 text-white px-3 py-1 rounded-md text-sm"
@@ -454,28 +546,76 @@ const exportToExcel = () => {
       Export PDF
     </button> */}
   </div>
+  
 
 </div>
 
-  
-      <div className="overflow-x-auto rounded-lg shadow-md">
-  <table className="min-w-full text-sm text-gray-700 bg-white border border-gray-200">
-    <thead className="bg-green-600 text-white text-center">
+{/* SUMMARY BAR */}
+<div className=" text-sm font-semibold text-gray-700">
+  Total Tokens: {filteredReports.length} &nbsp; | &nbsp;
+  Completed: {filteredReports.filter(r => r.status === "Completed").length} &nbsp; | &nbsp;
+  Cancelled: {filteredReports.filter(r => r.status === "Cancelled").length}
+</div>
+
+  <div className="relative flex-1 overflow-y-auto overflow-x-auto rounded-lg shadow-md">
+
+
+      <table className="min-w-full text-sm text-gray-700 bg-white border border-gray-200">
+        
+      {/* <thead className="bg-green-600 text-white text-center sticky top-0 z-10"> */}
+      <thead className="sticky top-0 z-30 bg-green-600 text-white text-center">
+
       <tr>
         <th className="px-3 py-2">Sr.No</th>
         <th className="px-3 py-2">Date & Time (T1)</th>
         <th className="px-3 py-2">Token</th>
         <th className="px-3 py-2">Mob. No</th>
-        <th className="px-3 py-2">Cat</th>
-        <th className="px-3 py-2">Sub-Cat</th>
-        <th className="px-3 py-2">User Name</th>
+
+        <th className="px-3 py-2">
+          <HeaderFilter
+            label="Cat"
+            value={categoryFilter}
+            options={uniqueCategories}
+            onChange={setCategoryFilter}
+          />
+        </th>
+
+        <th className="px-3 py-2">
+          <HeaderFilter
+            label="Sub-Cat"
+            value={subcategoryFilter}
+            options={uniqueSubcategories}
+            onChange={setSubcategoryFilter}
+          />
+        </th>
+
+        <th className="px-3 py-2">
+          <HeaderFilter
+            label="User"
+            value={userFilter}
+            options={uniqueUsers}
+            onChange={setUserFilter}
+          />
+        </th>
+
         <th className="px-3 py-2">Call Time (T2)</th>
         <th className="px-3 py-2">Receive Time (T3)</th>
         <th className="px-3 py-2">Complete Time (T4)</th>
-        <th className="px-3 py-2">TAT1 (T2-T1)</th>
-        <th className="px-3 py-2">TAT2 (T3-T1)</th>
-        <th className="px-3 py-2">TAT3 (T4-T3)</th>
-        <th className="px-3 py-2">Status</th>
+        <th className="px-3 py-2">TAT1</th>
+        <th className="px-3 py-2">TAT2</th>
+        <th className="px-3 py-2">TAT3</th>
+
+        <th className="px-3 py-2">Remarks</th>
+
+
+        <th className="px-3 py-2">
+          <HeaderFilter
+            label="Status"
+            value={statusFilter}
+            options={uniqueStatuses}
+            onChange={setStatusFilter}
+          />
+        </th>
       </tr>
     </thead>
 
@@ -486,15 +626,19 @@ const exportToExcel = () => {
           className="border-b hover:bg-gray-100 text-center transition"
         >
           <td className="px-3 py-2">{i + 1}</td>
-          <td className="px-3 py-2">{r.dateTime}</td>
+          {/* <td className="px-3 py-2">{r.dateTime}</td> */}
+          <td className="px-3 py-2">{formatDateTime24(r.dateTime)}</td>
           <td className="px-3 py-2 font-medium text-gray-800">{r.token}</td>
           <td className="px-3 py-2">{r.mobile}</td>
           <td className="px-3 py-2">{r.category}</td>
           <td className="px-3 py-2">{r.subcategory}</td>
           <td className="px-3 py-2">{r.username}</td>
-          <td className="px-3 py-2">{r.callTime}</td>
+          {/* <td className="px-3 py-2">{r.callTime}</td>
           <td className="px-3 py-2">{r.receiveTime}</td>
-          <td className="px-3 py-2">{r.completeTime}</td>
+          <td className="px-3 py-2">{r.completeTime}</td> */}
+          <td  className="px-3 py-2">{formatTime24(r.callTime)}</td>
+          <td  className="px-3 py-2">{formatTime24(r.receiveTime)}</td>
+      <td  className="px-3 py-2">{formatTime24(r.completeTime)}</td>
 
           <td className="px-3 py-2">
             {calculateTAT(r.dateTime, r.callTime)}
@@ -505,24 +649,12 @@ const exportToExcel = () => {
           <td className="px-3 py-2">
             {calculateTAT(r.receiveTime, r.completeTime)}
           </td>
-
-          {/* <td className="px-3 py-2">
-            <select
-              value={r.status}
-              onChange={(e) => handleStatusChange(r.id, e.target.value)}
-              className={`px-2 py-1 rounded-md border text-sm ${
-                r.status === "Completed"
-                  ? "bg-green-100 text-green-700 border-green-400"
-                  : "bg-red-100 text-red-700 border-red-400"
-              }`}
-            >
-              <option value="Completed">Completed</option>
-              <option value="Cancelled">Cancelled</option>
-            </select>
-          </td> */}
-          <td
-  className={`px-3 py-2 rounded-md text-sm font-medium ${
-    r.status === "Completed"
+      <td className="px-3 py-2">
+      {r.status === "Completed" ? "Service Done" : "Not Served"}
+    </td>
+<td
+className={`px-3 py-2 rounded-md text-sm font-medium ${
+r.status === "Completed"
       ? "bg-green-100 text-green-700 border border-green-400"
       : "bg-red-100 text-red-700 border border-red-400"
   }`}

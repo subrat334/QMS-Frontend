@@ -5,6 +5,20 @@ export const USER_ROLES = {
   COUNTER: 3,
   PATIENT_SCREEN: 6,
 } as const;
+
+
+export const getRoleLabel = (roleId: number) => {
+  const map: Record<number, string> = {
+    [USER_ROLES.SUPER_ADMIN]: "Super Admin",
+    [USER_ROLES.MIS]: "MIS",
+    [USER_ROLES.MONITOR]: "Monitor",
+    [USER_ROLES.COUNTER]: "Counter",
+    [USER_ROLES.PATIENT_SCREEN]: "Patient Screen",
+  };
+
+  return map[roleId] ?? `Role ${roleId}`;
+};
+
  
 // Explicit union (prevents TS narrowing bugs)
 export type UserRoleType =
