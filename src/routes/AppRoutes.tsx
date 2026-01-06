@@ -82,6 +82,12 @@ import TopBar from "../Components/TopBar/TopBar";
 
 import ProtectedRoute from "./ProtectedRoutes";
 
+// import UpdatePassword from "../Components/Password/update-password";
+import UpdatePassword from "../Password/update-password";
+
+
+
+
 // Role constants
 import { USER_ROLES } from "../constants/AllConstants";
 
@@ -188,6 +194,15 @@ const AppRoutes = () => (
             </MainLayout>
           }
         />
+                <Route
+          path="/update-password"
+          element={
+            <MainLayout>
+              <UpdatePassword />
+            </MainLayout>
+          }
+        />
+
 
         {/* Optional TopBar route */}
         <Route path="/topbar" element={<TopBar onLogout={() => {}} />} />
