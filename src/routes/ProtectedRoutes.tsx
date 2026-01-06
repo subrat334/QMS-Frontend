@@ -1,4 +1,4 @@
-// ProtectedRoutes.tsx
+
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import type { JSX } from "react";
@@ -11,21 +11,23 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ allowedRoles, element }: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
 
-  // Wait for AuthContext to restore user from localStorage
+  // Wait until auth is restored
   if (loading) {
-    return <div>Loading...</div>;
+    return null;
   }
 
-  // Not logged in
+  //  Not logged in → Login page
   if (!user) {
     return <Navigate to="/" replace />;
   }
 
-  // Role not allowed
+  //  Logged in but NOT allowed → FORCE LOGOUT + Login page
   if (!allowedRoles.includes(user.userType)) {
-    return <Navigate to="/unauthorized" replace />;
+    localStorage.clear(); // clear user + tokens
+    return <Navigate to="/" replace />;
   }
 
+  // ✅ Allowed
   return element;
 };
 

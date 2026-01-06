@@ -72,23 +72,16 @@ import Users from "../Components/Users/users";
 import ConfigureTokens from "../Components/ConfigureTokens/ConfigureTokens";
 import ManageToken from "../Components/ManageToken/ManageToken";
 import MonitorWithLayout from "../Components/Monitor/MonitorWithLayout";
-import TokenPage from "../Components/TokenPage/TokenPage";
+// import TokenPage from "../Components/TokenPage/TokenPage";
 
 import Datewise from "../Components/Reports/DateWise";
 import Catagory from "../Components/Reports/Catagory";
 import PatientWise from "../Components/Reports/UserWise";
 
 import TopBar from "../Components/TopBar/TopBar";
-
-import ProtectedRoute from "./ProtectedRoutes";
-
-// import UpdatePassword from "../Components/Password/update-password";
 import UpdatePassword from "../Password/update-password";
 
-
-
-
-// Role constants
+import ProtectedRoute from "./ProtectedRoutes";
 import { USER_ROLES } from "../constants/AllConstants";
 
 const AppRoutes = () => (
@@ -96,22 +89,16 @@ const AppRoutes = () => (
     <AuthProvider>
       <Routes>
 
-        {/* ----------- NO SIDEBAR / TOPBAR ----------- */}
+        {/* ---------- PUBLIC ---------- */}
         <Route path="/" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* ----------- PAGES WITH SIDEBAR & TOPBAR ----------- */}
-
+        {/* ---------- SUPER ADMIN ---------- */}
         <Route
           path="/dashboard"
           element={
             <ProtectedRoute
-              allowedRoles={[
-                USER_ROLES.SUPER_ADMIN,
-                USER_ROLES.MIS,
-                USER_ROLES.MONITOR,
-                USER_ROLES.COUNTER,
-              ]}
+              allowedRoles={[USER_ROLES.SUPER_ADMIN]}
               element={
                 <MainLayout>
                   <Dashboard />
@@ -122,89 +109,138 @@ const AppRoutes = () => (
         />
 
         <Route
-          path="/kiosk"
-          element={
-            <MainLayout>
-              <Kiosk />
-            </MainLayout>
-          }
-        />
-
-        <Route
           path="/users"
           element={
-            <MainLayout>
-              <Users />
-            </MainLayout>
+            <ProtectedRoute
+              allowedRoles={[USER_ROLES.SUPER_ADMIN]}
+              element={
+                <MainLayout>
+                  <Users />
+                </MainLayout>
+              }
+            />
           }
         />
 
         <Route
           path="/configure-tokens"
           element={
-            <MainLayout>
-              <ConfigureTokens />
-            </MainLayout>
+            <ProtectedRoute
+              allowedRoles={[USER_ROLES.SUPER_ADMIN]}
+              element={
+                <MainLayout>
+                  <ConfigureTokens />
+                </MainLayout>
+              }
+            />
           }
         />
 
+        {/* ---------- COUNTER ---------- */}
         <Route
           path="/manage-tokens"
           element={
-            <MainLayout>
-              <ManageToken />
-            </MainLayout>
+            <ProtectedRoute
+              allowedRoles={[USER_ROLES.SUPER_ADMIN, USER_ROLES.COUNTER]}
+              element={
+                <MainLayout>
+                  <ManageToken />
+                </MainLayout>
+              }
+            />
           }
         />
 
-        <Route path="/monitor" element={<MonitorWithLayout />} />
-
+        {/* ---------- MONITOR ---------- */}
         <Route
-          path="/TokenPage/:subcategoryId"
+          path="/monitor"
           element={
-            <MainLayout>
-              <TokenPage />
-            </MainLayout>
+            <ProtectedRoute
+              allowedRoles={[USER_ROLES.SUPER_ADMIN, USER_ROLES.MONITOR]}
+              element={<MonitorWithLayout />}
+            />
           }
         />
 
+        {/* ---------- PATIENT SCREEN ---------- */}
+        <Route
+          path="/kiosk"
+          element={
+            <ProtectedRoute
+              allowedRoles={[USER_ROLES.SUPER_ADMIN, USER_ROLES.PATIENT_SCREEN]}
+              element={
+                <MainLayout>
+                  <Kiosk />
+                </MainLayout>
+              }
+            />
+          }
+        />
+
+        {/* ---------- REPORTS (MIS) ---------- */}
         <Route
           path="/DateWise"
           element={
-            <MainLayout>
-              <Datewise />
-            </MainLayout>
+            <ProtectedRoute
+              allowedRoles={[USER_ROLES.SUPER_ADMIN, USER_ROLES.MIS]}
+              element={
+                <MainLayout>
+                  <Datewise />
+                </MainLayout>
+              }
+            />
           }
         />
 
         <Route
           path="/Catagory"
           element={
-            <MainLayout>
-              <Catagory />
-            </MainLayout>
+            <ProtectedRoute
+              allowedRoles={[USER_ROLES.SUPER_ADMIN, USER_ROLES.MIS]}
+              element={
+                <MainLayout>
+                  <Catagory />
+                </MainLayout>
+              }
+            />
           }
         />
 
         <Route
           path="/PatientWise"
           element={
-            <MainLayout>
-              <PatientWise />
-            </MainLayout>
+            <ProtectedRoute
+              allowedRoles={[USER_ROLES.SUPER_ADMIN, USER_ROLES.MIS]}
+              element={
+                <MainLayout>
+                  <PatientWise />
+                </MainLayout>
+              }
+            />
           }
         />
-                <Route
+
+        {/* ---------- COMMON ---------- */}
+        <Route
           path="/update-password"
           element={
-            <MainLayout>
-              <UpdatePassword />
-            </MainLayout>
+            <ProtectedRoute
+              allowedRoles={[
+                USER_ROLES.MIS,
+                USER_ROLES.MONITOR,
+                USER_ROLES.COUNTER,
+                USER_ROLES.PATIENT_SCREEN,
+              ]}
+              element={
+                <MainLayout>
+                  <UpdatePassword />
+                </MainLayout>
+              }
+            />
           }
         />
 
-
-        {/* Optional TopBar route */}
+        {/* Optional */}
         <Route path="/topbar" element={<TopBar onLogout={() => {}} />} />
 
       </Routes>
