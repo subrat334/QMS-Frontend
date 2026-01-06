@@ -245,6 +245,21 @@ updateUserActiveStatus: (userId: string, isActive: boolean) =>
 }) =>
   api.post("/Account/UpdateNormalUserDetails", data),
 
+  getReportByUser: (params: {
+  UserId: string;
+  UserName: string;
+  Category: string;
+  SubCategory: string;
+  Numbers?: number;
+}) =>
+  api.get("/Report/getReportByUser", {
+    params: {
+      ...params,
+      Numbers: params.Numbers ?? 0,
+    },
+  }),
+
+
 
 
 };
