@@ -789,6 +789,20 @@ const isPasswordValid =
   }
 }, [password, confirmPassword]);
 
+const handleCancelEdit = () => {
+  setEditUserId(null);
+  setName("");
+  setEmployeeId("");
+  setDesignation(ROLE_OPTIONS[0]?.value || 0);
+  setSelectedCategoryIds([]);
+  setSelectedSubcategories([]);
+  setSelectedCounterIds([]);
+  setSubcatCounters({});
+  // If you have a state for password/confirm password in edit mode, reset them here too
+  setPassword("");
+  setConfirmPassword("");
+};
+
 
       // const handleToggleUserStatus = async (
       //   userId: string,
@@ -1241,6 +1255,7 @@ const isPasswordValid =
             {/* Actions */}
             <div className="mt-4 flex gap-3">
               {editUserId ? (
+                <>
                 <button
                   onClick={handleUpdatePrivileges}
                   disabled={isSubmitting}
@@ -1248,6 +1263,15 @@ const isPasswordValid =
                 >
                   {isSubmitting ? "Updating..." : "Update Privileges"}
                 </button>
+
+                  {/* Added Cancel Button */}
+                  <button
+                    onClick={handleCancelEdit}
+                    className="bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200"
+                  >
+                    Cancel
+                  </button>
+                </>
               ) : (
                 <button
                   onClick={handleCreateUserAndPrivileges}
@@ -1401,7 +1425,7 @@ const isPasswordValid =
 
 
                       {/* Edit */}
-                      <button
+                      {/* <button
                           onClick={() => {
                             if (!u.IsActive) {
                               toast.error("Inactive users cannot be edited");
@@ -1417,11 +1441,45 @@ const isPasswordValid =
                           title="Edit User"
                         >
                           <Pencil size={16} />
-                        </button>
+                        </button> */}
+                        {u.UserType !== "SuperAdmin" && (
+                            <button
+                              onClick={() => {
+                                if (!u.IsActive) {
+                                  toast.error("Inactive users cannot be edited");
+                                  return;
+                                }
+                                openEditPrivileges(u.UserId);
+                              }}
+                              className={`p-2 rounded ${
+                                !u.IsActive ? "text-gray-400 cursor-not-allowed" : "text-green-600 hover:bg-green-100"
+                              }`}
+                              title="Edit User"
+                            >
+                              <Pencil size={16} />
+                            </button>
+                          )}
 
 
-                      {/* Delete */}
-                      {u.UserType !== "SuperAdmin" && (
+                                                {/* Delete */}
+                                                {u.UserType !== "SuperAdmin" && (
+                            <button
+                              onClick={() => {
+                                if (!u.IsActive) {
+                                  toast.error("Inactive users cannot be deleted");
+                                  return;
+                                }
+                                handleDeleteUser(u.UserId);
+                              }}
+                              className={`p-2 rounded ${
+                                !u.IsActive ? "text-gray-400 cursor-not-allowed" : "text-red-600 hover:bg-red-100"
+                              }`}
+                              title="Delete User"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                      {/* {u.UserType !== "SuperAdmin" && (
                     <button
                       onClick={() => {
                         if (!u.IsActive) {
@@ -1445,7 +1503,7 @@ const isPasswordValid =
                     >
                       <Trash2 size={16} />
                     </button>
-                  )}
+                  )} */}
 
                     </div>
                   </td>

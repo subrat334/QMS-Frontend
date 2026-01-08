@@ -193,7 +193,7 @@ const UserwiseReport = () => {
         },
       },
 
-      pageMargins: [40, 80, 40, 60],
+      pageMargins: [40, 100, 40, 60],
     };
 
     pdfMake.createPdf(docDefinition).download("UserwiseReport.pdf");
