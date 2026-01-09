@@ -214,9 +214,6 @@ getDisplayScreenByCategoryAndSubCategory: (
   api.get(
     `/Display/screen?categoryId=${categoryId}&subCategoryId=${subCategoryId}`
   ),
-
-
-
 // NEW STATUS UPDATE API
 // -------------------------------------------------------
 updateTokenStatus: (data: {
@@ -258,9 +255,31 @@ updateUserActiveStatus: (userId: string, isActive: boolean) =>
       Numbers: params.Numbers ?? 0,
     },
   }),
-
-
-
+  getReportUserByDetail: (params: {
+  UserId: string;
+  UserName: string;
+  Category: string;
+  SubCategory: string;
+  StartDate?: string;
+  EndDate?: string;
+  Numbers?: number;
+}) =>
+  api.get("/Report/getReportUserbyDetail", {
+    params: {
+      ...params,
+      Numbers: params.Numbers ?? 0,
+    },
+  }),
+  updateNormalUserPassword: (
+  userId: string,
+  oldPassword: string,
+  newPassword: string
+) =>
+  api.post(
+    `/Account/UpdateNormalUserPassword?UserId=${userId}&oldpassword=${encodeURIComponent(
+      oldPassword
+    )}&newpassword=${encodeURIComponent(newPassword)}`
+  ),
 
 };
 

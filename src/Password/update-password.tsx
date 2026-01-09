@@ -1,4 +1,6 @@
+  
 import { useState } from "react";
+import { API } from "../services/AllApiServices";
 
 type FormState = {
   oldPassword: string;
@@ -15,18 +17,15 @@ export default function UpdatePassword() {
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
     setError("");
     setSuccess("");
   };
 
-  const handleSubmit = async (
-    e: React.FormEvent<HTMLFormElement>
-  ) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!form.oldPassword || !form.newPassword || !form.confirmPassword) {
@@ -39,14 +38,32 @@ export default function UpdatePassword() {
       return;
     }
 
+    const userId = localStorage.getItem("UserId");
+
+    if (!userId) {
+      setError("User not logged in");
+      return;
+    }
+
     try {
-      // 🔹 Call your API here
-      // await API.post("/auth/update-password", form);
+      setLoading(true);
+
+      await API.updateNormalUserPassword(
+        userId,
+        form.oldPassword,
+        form.newPassword
+      );
 
       setSuccess("Password updated successfully");
-      setForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
-    } catch {
-      setError("Failed to update password");
+      setForm({
+        oldPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+    } catch (err) {
+      setError("Old password is incorrect or update failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -64,12 +81,11 @@ export default function UpdatePassword() {
           <label className="block mb-1 text-sm font-medium">
             Previous Password
           </label>
-                  <input
+          <input
             type="password"
             name="oldPassword"
             value={form.oldPassword}
             onChange={handleChange}
-            placeholder="Enter your previous password"
             className="w-full border rounded-lg px-3 py-2"
           />
         </div>
@@ -79,37 +95,33 @@ export default function UpdatePassword() {
             New Password
           </label>
           <input
-  type="password"
+            type="password"
             name="newPassword"
             value={form.newPassword}
             onChange={handleChange}
-            placeholder="Create a new password"
             className="w-full border rounded-lg px-3 py-2"
           />
-
-
         </div>
 
         <div>
           <label className="block mb-1 text-sm font-medium">
             Confirm Password
           </label>
-          
           <input
             type="password"
             name="confirmPassword"
             value={form.confirmPassword}
             onChange={handleChange}
-            placeholder="Re-enter your new password"
             className="w-full border rounded-lg px-3 py-2"
           />
         </div>
 
         <button
           type="submit"
-          className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700"
+          disabled={loading}
+          className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 disabled:opacity-60"
         >
-          Update Password
+          {loading ? "Updating..." : "Update Password"}
         </button>
       </form>
     </div>

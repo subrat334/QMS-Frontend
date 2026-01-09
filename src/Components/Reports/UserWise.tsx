@@ -27,6 +27,16 @@ interface PatientRow {
   details?: Detail[];
 }
 
+interface UserDetailRow {
+  UserId: string;
+  UserName: string;
+  Category: string;
+  SubCategory: string;
+  Date: string | null;
+  SequenceNo: number;
+}
+
+
 
 
 const loadImageAsBase64 = (url: string): Promise<string> =>
@@ -57,9 +67,60 @@ const UserwiseReport = () => {
     subcategory: "",
     numbers: "",
   });
+  const [detailData, setDetailData] = useState<UserDetailRow[]>([]);
   const [reportType, setReportType] = useState<"summary" | "detailed">("summary");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate,   setToDate] = useState("");
+
+  const fetchDetailedReport = async () => {
+  try {
+    setLoading(true);
+    setError("");
+
+    const res = await API.getReportUserByDetail({
+      UserId: filters.userId || "",
+      UserName: filters.userName || "",
+      Category: filters.category || "",
+      SubCategory: filters.subcategory || "",
+      Numbers: Number(filters.numbers) || 0,
+
+      // ✅ DATE FILTERS
+      StartDate: fromDate || undefined,
+      EndDate: toDate || undefined,
+    });
+
+    setDetailData(res.data ?? []);
+  } catch {
+    setError("Failed to fetch detailed report");
+    setDetailData([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+const groupedDetailData = detailData.reduce((acc, curr) => {
+  const key = `${curr.UserId}-${curr.Category}-${curr.SubCategory}`;
+
+  if (!acc[key]) {
+    acc[key] = {
+      userId: curr.UserId,
+      userName: curr.UserName,
+      category: curr.Category,
+      subcategory: curr.SubCategory,
+      details: [],
+    };
+  }
+
+  acc[key].details.push(curr);
+  return acc;
+}, {} as Record<string, any>);
+
+const detailedRows = Object.values(groupedDetailData);
+
+
 
   const handleFilterChange = (field: string, value: string) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
@@ -98,9 +159,27 @@ const UserwiseReport = () => {
     }
   };
 
+  // useEffect(() => {
+  //   fetchReport();
+  // }, [filters]);
+
+//   useEffect(() => {
+//   if (reportType === "summary") {
+//     fetchReport();
+//   } else {
+//     fetchDetailedReport();
+//   }
+// }, [filters, reportType]);
+
   useEffect(() => {
-    fetchReport();
-  }, [filters]);
+    if (reportType === "summary") {
+      fetchReport();
+    } else {
+      fetchDetailedReport();
+    }
+  }, [filters, reportType, fromDate, toDate]);
+
+
 
     const handlePrint = async () => {
       const logoBase64 = await loadImageAsBase64(logo);
@@ -265,6 +344,51 @@ const UserwiseReport = () => {
         </div>
       </div>
 
+        <div className="flex items-center gap-4 mb-4">
+
+        {/* From Date */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 mr-2">
+            From:
+          </label>
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            className="border border-gray-300 rounded-md px-2 py-1 text-sm"
+          />
+        </div>
+
+        {/* To Date */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 mr-2">
+            To:
+          </label>
+          <input
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            min={fromDate || undefined}
+            className="border border-gray-300 rounded-md px-2 py-1 text-sm"
+          />
+        </div>
+
+        {/* Clear Button */}
+        {(fromDate || toDate) && (
+          <button
+            onClick={() => {
+              setFromDate("");
+              setToDate("");
+            }}
+            className="text-sm text-blue-600 underline"
+          >
+            Clear
+          </button>
+        )}
+
+      </div>
+
+
       {/* Summary Info */}
       <div className="mb-4 text-sm text-gray-600">
         {loading ? (
@@ -352,42 +476,71 @@ const UserwiseReport = () => {
             </tr>
           </thead>
 
-          <tbody>
-            {!loading && !error && filteredData.length > 0 ? (
-              filteredData.map((row, i) => (
-                <React.Fragment key={row.id}>
-                  {/* Main summary row */}
-                  <tr className="border-b text-center">
-                    <td className="px-3 py-2">{i + 1}</td>
-                    <td className="px-3 py-2">{row.userName}</td>
-                    <td className="px-3 py-2">{row.userId}</td>
-                    <td className="px-3 py-2">{row.category}</td>
-                    <td className="px-3 py-2">{row.subcategory}</td>
-                    <td className="px-3 py-2 font-semibold text-green-700">{row.numbers}</td>
-                  </tr>
+            <tbody>
+        {/* SUMMARY REPORT */}
+        {reportType === "summary" && !loading && !error && filteredData.length > 0 && (
+          filteredData.map((row, i) => (
+            <tr key={row.id} className="border-b text-center">
+              <td className="px-3 py-2">{i + 1}</td>
+              <td className="px-3 py-2">{row.userName}</td>
+              <td className="px-3 py-2">{row.userId}</td>
+              <td className="px-3 py-2">{row.category}</td>
+              <td className="px-3 py-2">{row.subcategory}</td>
+              <td className="px-3 py-2 font-semibold text-green-700">
+                {row.numbers}
+              </td>
+            </tr>
+          ))
+        )}
 
-                  {/* Detailed rows */}
-                  {reportType === "detailed" &&
-                    row.details?.map((d, idx) => (
-                      <tr key={`${row.id}-${idx}`} className="border-b text-center bg-gray-50">
-                        <td></td>
-                        <td className="px-3 py-2 pl-4 text-gray-600">{d.date}</td>
-                        <td className="px-3 py-2 text-gray-600">{d.service}</td>
-                        <td className="px-3 py-2"></td>
-                        <td className="px-3 py-2"></td>
-                        <td className="px-3 py-2"></td>
-                      </tr>
-                    ))}
-                </React.Fragment>
-              ))
-            ) : loading ? null : (
-              <tr>
-                <td colSpan={6} className="text-center py-4 text-gray-500 italic">
-                  {error ? error : "No records found for selected filters"}
+        {/* DETAILED REPORT */}
+        {reportType === "detailed" && !loading && !error && detailedRows.length > 0 && (
+          detailedRows.map((row: any, i: number) => (
+            <React.Fragment key={i}>
+              {/* Parent row */}
+              <tr className="border-b text-center font-medium bg-white">
+                <td className="px-3 py-2">{i + 1}</td>
+                <td className="px-3 py-2">{row.userName}</td>
+                <td className="px-3 py-2">{row.userId}</td>
+                <td className="px-3 py-2">{row.category}</td>
+                <td className="px-3 py-2">{row.subcategory}</td>
+                <td className="px-3 py-2 font-semibold text-green-700">
+                  {row.details.length}
                 </td>
               </tr>
-            )}
-          </tbody>
+
+              {/* Child detail rows */}
+              {row.details.map((d: any, idx: number) => (
+                <tr
+                  key={idx}
+                  className="border-b text-center bg-gray-50 text-gray-600"
+                >
+                  <td></td>
+                  <td colSpan={2} className="px-3 py-2">
+                    {d.Date ? new Date(d.Date).toLocaleString() : "-"}
+                  </td>
+                  <td colSpan={3} className="px-3 py-2">
+                    Sequence No: {d.SequenceNo}
+                  </td>
+                </tr>
+              ))}
+            </React.Fragment>
+          ))
+        )}
+
+        {/* EMPTY / ERROR STATE */}
+        {!loading &&
+          !error &&
+          ((reportType === "summary" && filteredData.length === 0) ||
+            (reportType === "detailed" && detailedRows.length === 0)) && (
+            <tr>
+              <td colSpan={6} className="text-center py-4 text-gray-500 italic">
+                No records found for selected filters
+              </td>
+            </tr>
+          )}
+        </tbody>
+
         </table>
       </div>
     </div>

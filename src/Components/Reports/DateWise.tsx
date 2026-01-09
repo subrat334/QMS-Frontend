@@ -320,7 +320,7 @@ const DatewiseReport = () => {
 
   // const [filterDate, setFilterDate] = useState("");
   const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [toDate,   setToDate] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [subcategoryFilter, setSubcategoryFilter] = useState("");
   const [userFilter, setUserFilter] = useState("");
