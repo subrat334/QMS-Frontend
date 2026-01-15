@@ -1,10 +1,11 @@
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
-import "jspdf-autotable";
+import { API } from "../../services/AllApiServices";
+/* ===================== INTERFACES ===================== */
 
 interface CategoryRow {
-  id: number;
+  id: number; 
   date: string;
   category: string;
   subcategory: string;
@@ -21,58 +22,85 @@ interface SummaryRow {
   cancelled: number;
   autoClosed: number;
 }
+/* ===================== COMPONENT ===================== */
 
 const CatagorywiseReport = () => {
-  const [data] = useState<CategoryRow[]>([
-    { id: 1, date: "2025-01-01", category: "OPD", subcategory: "General", tokens: 10, completed: 7, cancelled: 2, autoClosed: 1 },
-    { id: 2, date: "2025-01-01", category: "OPD", subcategory: "Cardiology", tokens: 8, completed: 6, cancelled: 1, autoClosed: 1 },
-    { id: 3, date: "2025-01-01", category: "Diagnostics", subcategory: "Lab", tokens: 6, completed: 5, cancelled: 1, autoClosed: 0 },
-    { id: 4, date: "2025-01-01", category: "Emergency", subcategory: "Trauma", tokens: 4, completed: 3, cancelled: 1, autoClosed: 0 },
-    { id: 5, date: "2025-01-01", category: "OPD", subcategory: "Orthopedics", tokens: 12, completed: 10, cancelled: 1, autoClosed: 1 },
-    { id: 6, date: "2025-01-01", category: "Diagnostics", subcategory: "Radiology", tokens: 9, completed: 8, cancelled: 0, autoClosed: 1 },
-    { id: 7, date: "2025-01-02", category: "OPD", subcategory: "General", tokens: 15, completed: 12, cancelled: 2, autoClosed: 1 },
-    { id: 8, date: "2025-01-02", category: "OPD", subcategory: "Cardiology", tokens: 10, completed: 8, cancelled: 1, autoClosed: 1 },
-    { id: 9, date: "2025-01-02", category: "Emergency", subcategory: "Trauma", tokens: 7, completed: 5, cancelled: 1, autoClosed: 1 },
-    { id: 10, date: "2025-01-02", category: "Diagnostics", subcategory: "Lab", tokens: 14, completed: 12, cancelled: 1, autoClosed: 1 },
-    { id: 11, date: "2025-01-02", category: "Surgery", subcategory: "General", tokens: 6, completed: 5, cancelled: 0, autoClosed: 1 },
-    { id: 12, date: "2025-01-03", category: "OPD", subcategory: "General", tokens: 18, completed: 15, cancelled: 2, autoClosed: 1 },
-    { id: 13, date: "2025-01-03", category: "OPD", subcategory: "Dermatology", tokens: 8, completed: 7, cancelled: 0, autoClosed: 1 },
-    { id: 14, date: "2025-01-03", category: "Diagnostics", subcategory: "Radiology", tokens: 11, completed: 10, cancelled: 0, autoClosed: 1 },
-    { id: 15, date: "2025-01-03", category: "Emergency", subcategory: "Pediatrics", tokens: 5, completed: 4, cancelled: 1, autoClosed: 0 },
-    { id: 16, date: "2025-01-03", category: "Surgery", subcategory: "Orthopedics", tokens: 9, completed: 8, cancelled: 0, autoClosed: 1 },
-    { id: 17, date: "2025-01-04", category: "OPD", subcategory: "General", tokens: 22, completed: 18, cancelled: 3, autoClosed: 1 },
-    { id: 18, date: "2025-01-04", category: "OPD", subcategory: "Neurology", tokens: 7, completed: 6, cancelled: 0, autoClosed: 1 },
-    { id: 19, date: "2025-01-04", category: "Diagnostics", subcategory: "Lab", tokens: 16, completed: 14, cancelled: 1, autoClosed: 1 },
-    { id: 20, date: "2025-01-04", category: "Emergency", subcategory: "Trauma", tokens: 9, completed: 7, cancelled: 1, autoClosed: 1 },
-    { id: 21, date: "2025-01-05", category: "OPD", subcategory: "General", tokens: 20, completed: 17, cancelled: 2, autoClosed: 1 },
-    { id: 22, date: "2025-01-05", category: "OPD", subcategory: "ENT", tokens: 11, completed: 9, cancelled: 1, autoClosed: 1 },
-    { id: 23, date: "2025-01-05", category: "Diagnostics", subcategory: "Cardiology", tokens: 13, completed: 12, cancelled: 0, autoClosed: 1 },
-    { id: 24, date: "2025-01-05", category: "Surgery", subcategory: "General", tokens: 8, completed: 7, cancelled: 0, autoClosed: 1 },
-    { id: 25, date: "2025-01-06", category: "OPD", subcategory: "General", tokens: 25, completed: 21, cancelled: 3, autoClosed: 1 },
-    { id: 26, date: "2025-01-06", category: "OPD", subcategory: "Gastroenterology", tokens: 9, completed: 8, cancelled: 0, autoClosed: 1 },
-    { id: 27, date: "2025-01-06", category: "Diagnostics", subcategory: "Lab", tokens: 18, completed: 16, cancelled: 1, autoClosed: 1 },
-    { id: 28, date: "2025-01-06", category: "Emergency", subcategory: "Trauma", tokens: 12, completed: 10, cancelled: 1, autoClosed: 1 },
-    { id: 29, date: "2025-01-07", category: "OPD", subcategory: "General", tokens: 19, completed: 16, cancelled: 2, autoClosed: 1 },
-    { id: 30, date: "2025-01-07", category: "Surgery", subcategory: "Cardiac", tokens: 5, completed: 4, cancelled: 0, autoClosed: 1 },
-  ]);
+  /* ---------- STATE ---------- */
+  const [data, setData] = useState<CategoryRow[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const [categoryFilter, setCategoryFilter] = useState("");
-  const [subcategoryFilter, setSubcategoryFilter] = useState("");
-  const [reportType, setReportType] = useState<"summary" | "detailed">("summary");
+  const [categoryFilter, setCategoryFilter] = useState<number | "">("");
+  const [subcategoryFilter, setSubcategoryFilter] = useState<number | "">("");
 
-  const categories = Array.from(new Set(data.map(d => d.category)));
-  const subcategories = Array.from(new Set(data.map(d => d.subcategory)));
+  const [reportType, setReportType] =
+    useState<"summary" | "detailed">("summary");
 
-  /* -------------------- FILTERED DATA -------------------- */
-  const filteredData = useMemo(() => {
-    return data.filter(d => {
-      const categoryMatch = categoryFilter ? d.category === categoryFilter : true;
-      const subcategoryMatch = subcategoryFilter ? d.subcategory === subcategoryFilter : true;
-      return categoryMatch && subcategoryMatch;
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageSize] = useState(10);
+  const [totalRecords, setTotalRecords] = useState(0);
+
+  /* ---------- API CALL ---------- */
+
+  useEffect(() => {
+    fetchReport();
+  }, [categoryFilter, subcategoryFilter, pageNumber]);
+
+ const fetchReport = async () => {
+  try {
+    setLoading(true);
+
+    const res = await API.getReportByCategoryAndSubCategory({
+      CategoryId: categoryFilter || undefined,
+      SubCategoryId: subcategoryFilter || undefined,
+      PageNumber: pageNumber,
+      PageSize: pageSize,
     });
-  }, [data, categoryFilter, subcategoryFilter]);
 
-  /* -------------------- SUMMARY DATA -------------------- */
+    const apiData = res.data?.data || [];
+
+    setTotalRecords(res.data?.totalRecords || 0);
+
+    const mapped: CategoryRow[] = apiData.map(
+      (item: any, index: number) => ({
+        id: index + 1,
+        date: item.date,
+        category: item.category,
+        subcategory: item.subcategory,
+        tokens: item.tokens,
+        completed: item.completed, 
+        cancelled: item.cancelled,
+        autoClosed: item.autoClosed,
+      })
+    );
+
+    setData(mapped);
+  } catch (error) {
+    console.error("Failed to fetch report", error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+  /* ---------- DROPDOWNS (derived) ---------- */
+
+  const categories = Array.from(
+    new Map(
+      data.map((d: any) => [d.categoryId, d.category])
+    ).entries()
+  );
+
+  const subcategories = Array.from(
+    new Map(
+      data.map((d: any) => [d.subCategoryId, d.subcategory])
+    ).entries()
+  );
+
+  /* ---------- FILTERED DATA ---------- */
+
+  const filteredData = useMemo(() => data, [data]);
+
+  /* ---------- SUMMARY DATA ---------- */
   const summaryData: SummaryRow[] = useMemo(() => {
     const map: Record<string, SummaryRow> = {};
 
@@ -96,76 +124,77 @@ const CatagorywiseReport = () => {
     return Object.values(map);
   }, [filteredData]);
 
-  /* -------------------- ACTIONS -------------------- */
+  /* ---------- TOTALS ---------- */
+
+   const grandTotal = useMemo(() => {
+  return filteredData.reduce(
+    (acc, row) => {
+      acc.tokens += row.tokens;
+      acc.completed += row.completed;
+      acc.cancelled += row.cancelled;
+      acc.autoClosed += row.autoClosed;
+      return acc;
+    },
+    { tokens: 0, completed: 0, cancelled: 0, autoClosed: 0 }
+  );
+}, [filteredData]);
+
+  /* ---------- ACTIONS ---------- */
+
   const handlePrint = () => window.print();
 
   const exportToExcel = () => {
-    const exportData = reportType === "summary" ? summaryData : filteredData;
+    const exportData =
+      reportType === "summary" ? summaryData : filteredData;
+
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Report");
     XLSX.writeFile(workbook, "Category_Report.xlsx");
   };
 
+  /* ===================== UI ===================== */
 
-  const totals = useMemo(() => {
-  return filteredData.reduce(
-    (acc, row) => {
-      acc.tokens += row.tokens;
-      acc.completed += row.completed;
-      acc.cancelled += row.cancelled;
-      acc.autoClosed += row.autoClosed;
-      return acc;
-    },
-    { tokens: 0, completed: 0, cancelled: 0, autoClosed: 0 }
-  );
-}, [filteredData]);
-
-
-    const grandTotal = useMemo(() => {
-  return filteredData.reduce(
-    (acc, row) => {
-      acc.tokens += row.tokens;
-      acc.completed += row.completed;
-      acc.cancelled += row.cancelled;
-      acc.autoClosed += row.autoClosed;
-      return acc;
-    },
-    { tokens: 0, completed: 0, cancelled: 0, autoClosed: 0 }
-  );
-}, [filteredData]);
-
-
-
-  /* -------------------- UI -------------------- */
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <h1 className="text-2xl font-semibold text-green-700 mb-6">
         Category Wise Report
       </h1>
 
-      {/* Filters */}
+      {/* FILTERS */}
       <div className="mb-6 flex flex-wrap justify-between gap-4">
-      <div className="flex gap-4">
+    <div className="flex gap-4">
       <select
         value={categoryFilter}
-        onChange={e => setCategoryFilter(e.target.value)}
-        className="border border-gray-300 rounded-md px-3 py-1 text-sm"
+        onChange={e =>
+        setCategoryFilter(
+          e.target.value ? Number(e.target.value) : ""
+        )
+      }
+      className="border px-3 py-1 rounded-md text-sm"
       >
         <option value="">All Categories</option>
-        {categories.map(c => (
-          <option key={c} value={c}>{c}</option>
+        {categories.map(([id, name]) => (
+          <option key={id} value={id}>
+          {name}
+        </option>
         ))}
       </select>
 
       <select
         value={subcategoryFilter}
-        onChange={e => setSubcategoryFilter(e.target.value)}
-        className="border border-gray-300 rounded-md px-3 py-1 text-sm"
+        onChange={e =>
+        setSubcategoryFilter(
+          e.target.value ? Number(e.target.value) : ""
+        )
+      }
+      className="border px-3 py-1 rounded-md text-sm"
       >
         <option value="">All Subcategories</option>
-        {subcategories.map(s => (
-          <option key={s} value={s}>{s}</option>
+        {subcategories.map(([id, name]) => (
+          <option key={id} value={id}>
+            {name}
+          </option>
         ))}
       </select>
       </div>
@@ -173,34 +202,43 @@ const CatagorywiseReport = () => {
       <div className="flex gap-3">
         <select
           value={reportType}
-          onChange={e => setReportType(e.target.value as "summary" | "detailed")}
-          className="border border-gray-300 rounded-md px-3 py-1 text-sm"
+          onChange={e =>
+        setReportType(e.target.value as any)
+      }
+      className="border px-3 py-1 rounded-md text-sm"
         >
           <option value="summary">Summary Report</option>
           <option value="detailed">Detailed Report</option>
         </select>
 
-        <button onClick={handlePrint} className="bg-blue-600 text-white px-3 py-1 rounded-md text-sm">
+    <button
+      onClick={handlePrint}
+      className="bg-blue-600 text-white px-3 py-1 rounded-md text-sm"
+    >
       Print
     </button>
 
-    <button onClick={exportToExcel} className="bg-green-600 text-white px-3 py-1 rounded-md text-sm">
+    <button
+      onClick={exportToExcel}
+      className="bg-green-600 text-white px-3 py-1 rounded-md text-sm"
+    >
       Export Excel
     </button>
   </div>
-      </div>
-      <div className="mb-4 text-sm font-semibold text-gray-700">
-  Total Tokens: <span className="text-green-700">{totals.tokens}</span> |
-  Completed: <span className="text-blue-700">{totals.completed}</span> |
-  Cancelled: <span className="text-red-700">{totals.cancelled}</span>
-</div>
+        </div>
+{/* LOADING */}
+{loading && (
+  <div className="text-center py-6 text-gray-500">
+    Loading report...
+        </div>
+      )}
 
-
-      {/* Table */}
-   <div className="overflow-x-auto rounded-lg shadow-md bg-white">
+      {/* TABLE */}
+{!loading && (
+<div className="overflow-x-auto bg-white rounded-lg shadow">
   {reportType === "summary" ? (
-    <table className="min-w-full text-sm text-gray-700 border border-gray-200">
-      <thead className="bg-green-600 text-white text-center">
+    <table className="min-w-full text-sm border">
+      <thead className="bg-green-600 text-white">
         <tr>
           <th className="px-3 py-2">Sr.No</th>
           <th className="px-3 py-2">Category</th>
@@ -223,13 +261,10 @@ const CatagorywiseReport = () => {
           </tr>
         ))}
       </tbody>
-
-      {/* ⭐ GRAND TOTAL ROW (SUMMARY) */}
       <tfoot>
-        <tr className="bg-gray-100 font-bold text-center">
-          <td className="px-3 py-2"></td>
-          <td className="px-3 py-2 text-right">Grand Total</td>
-
+        <tr className="font-bold text-center bg-gray-100">
+          <td />
+          <td className="px-3 py-2">Grand Total</td>
           <td className="px-3 py-2">{grandTotal.tokens}</td>
           <td className="px-3 py-2">{grandTotal.completed}</td>
           <td className="px-3 py-2">{grandTotal.cancelled}</td>
@@ -238,8 +273,8 @@ const CatagorywiseReport = () => {
       </tfoot>
     </table>
   ) : (
-    <table className="min-w-full text-sm text-gray-700 border border-gray-200">
-      <thead className="bg-green-600 text-white text-center">
+    <table className="min-w-full text-sm border">
+      <thead className="bg-green-600 text-white">
         <tr>
           <th className="px-3 py-2">Sr.No</th>
           <th className="px-3 py-2">Date</th>
@@ -254,7 +289,7 @@ const CatagorywiseReport = () => {
 
       <tbody>
         {filteredData.map((row, i) => (
-          <tr key={row.id} className="border-b hover:bg-gray-100 text-center transition">
+          <tr key={row.id} className="text-center border-b">
             <td className="px-3 py-2">{i + 1}</td>
             <td className="px-3 py-2">{row.date}</td>
             <td className="px-3 py-2">{row.category}</td>
@@ -266,15 +301,12 @@ const CatagorywiseReport = () => {
           </tr>
         ))}
       </tbody>
-
-      {/* ⭐ GRAND TOTAL ROW (DETAILED) */}
       <tfoot>
-        <tr className="bg-gray-100 font-bold text-center">
-          <td className="px-3 py-2"></td>
-          <td className="px-3 py-2"></td>
-          <td className="px-3 py-2 text-right">Grand Total</td>
-          <td className="px-3 py-2"></td>
-
+        <tr className="font-bold text-center bg-gray-100">
+          <td />
+          <td />
+          <td>Grand Total</td>
+          <td />
           <td className="px-3 py-2">{grandTotal.tokens}</td>
           <td className="px-3 py-2">{grandTotal.completed}</td>
           <td className="px-3 py-2">{grandTotal.cancelled}</td>
@@ -284,7 +316,28 @@ const CatagorywiseReport = () => {
     </table>
   )}
 </div>
+      )}
 
+      {/* PAGINATION */}
+      <div className="flex justify-end gap-3 mt-4">
+        <button
+          disabled={pageNumber === 1}
+          onClick={() => setPageNumber(p => p - 1)}
+          className="px-3 py-1 border rounded disabled:opacity-50"
+        >
+          Previous
+        </button>
+
+        <span className="text-sm">Page {pageNumber}</span>
+
+        <button
+          disabled={pageNumber * pageSize >= totalRecords}
+          onClick={() => setPageNumber(p => p + 1)}
+          className="px-3 py-1 border rounded disabled:opacity-50"
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 };

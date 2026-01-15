@@ -281,7 +281,29 @@ updateUserActiveStatus: (userId: string, isActive: boolean) =>
     )}&newpassword=${encodeURIComponent(newPassword)}`
   ),
 
-};
+    getReportByDate: (params: {
+  From: string;
+  To: string;
+  // OrgId: number;
+  PageNumber?: number;
+  PageSize?: number;
+}) =>
+  api.get("/Report/getReportByDate", { params }),
+
+getReportByCategoryAndSubCategory: (params: {
+  CategoryId?: number;
+  SubCategoryId?: number;
+  PageNumber?: number;
+  PageSize?: number;
+}) =>
+  api.get("/Report/getReportbyCategoryAndSubCategory", {
+    params: {
+      PageNumber: 1,
+      PageSize: 10,
+      ...params,
+    },
+  }),
+}
 
 // import api from "./api";
 
