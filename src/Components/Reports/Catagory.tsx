@@ -2,18 +2,39 @@
 import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { API } from "../../services/AllApiServices";
+import pdfMake from "pdfmake/build/pdfmake";
+import pdfFonts from "pdfmake/build/vfs_fonts";
+// import type { TDocumentDefinitions } from "pdfmake/interfaces";
+import logo from "../../assets/utkal.png";
+
+(pdfMake as any).vfs = pdfFonts.vfs;
+
 /* ===================== INTERFACES ===================== */
 
+// interface CategoryRow {
+//   id: number; 
+//   date: string;
+//   category: string;
+//   subcategory: string;
+//   tokens: number;
+//   completed: number;
+//   cancelled: number;
+//   autoClosed: number;
+// }
+
 interface CategoryRow {
-  id: number; 
+  id: number;
   date: string;
+  categoryId: number;
   category: string;
+  subCategoryId: number;
   subcategory: string;
   tokens: number;
   completed: number;
   cancelled: number;
   autoClosed: number;
 }
+
 
 interface SummaryRow {
   category: string;
@@ -41,11 +62,247 @@ const CatagorywiseReport = () => {
 
   /* ---------- API CALL ---------- */
 
-  useEffect(() => {
-    fetchReport();
-  }, [categoryFilter, subcategoryFilter, pageNumber]);
+  // useEffect(() => {
+  //   fetchReport();
+  // }, [categoryFilter, subcategoryFilter, pageNumber]);
 
- const fetchReport = async () => {
+  useEffect(() => {
+  setPageNumber(1); // reset page when mode/filter changes
+}, [categoryFilter, subcategoryFilter, reportType]);
+
+useEffect(() => {
+  if (reportType === "summary") {
+    fetchSummaryReport();
+  } else {
+    fetchDetailedReport();
+  }
+}, [categoryFilter, subcategoryFilter, pageNumber, reportType]);
+
+
+const loadImageAsBase64 = (url: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx?.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+};
+
+const handlePrint = async () => {
+  const logoBase64 = await loadImageAsBase64(logo);
+
+  const body: any[] = [];
+
+  // ================= HEADER ROW =================
+  if (reportType === "summary") {
+    body.push([
+      { text: "Sr.No", style: "tableHeader" },
+      { text: "Category", style: "tableHeader" },
+      { text: "Tokens", style: "tableHeader" },
+      { text: "Completed", style: "tableHeader" },
+      { text: "Cancelled", style: "tableHeader" },
+      { text: "Auto Closed", style: "tableHeader" },
+    ]);
+
+    summaryData.forEach((row, i) => {
+      body.push([
+        i + 1,
+        row.category,
+        row.tokens,
+        row.completed,
+        row.cancelled,
+        row.autoClosed,
+      ]);
+    });
+
+    // GRAND TOTAL
+    body.push([
+      { text: "", bold: true },
+      { text: "Grand Total", bold: true },
+      grandTotal.tokens,
+      grandTotal.completed,
+      grandTotal.cancelled,
+      grandTotal.autoClosed,
+    ]);
+  } else {
+    body.push([
+      { text: "Sr.No", style: "tableHeader" },
+      { text: "Date", style: "tableHeader" },
+      { text: "Category", style: "tableHeader" },
+      { text: "Subcategory", style: "tableHeader" },
+      { text: "Tokens", style: "tableHeader" },
+      { text: "Completed", style: "tableHeader" },
+      { text: "Cancelled", style: "tableHeader" },
+      { text: "Auto Closed", style: "tableHeader" },
+    ]);
+
+    filteredData.forEach((row, i) => {
+      body.push([
+        i + 1,
+        new Date(row.date).toLocaleDateString("en-GB"),
+        row.category,
+        row.subcategory,
+        row.tokens,
+        row.completed,
+        row.cancelled,
+        row.autoClosed,
+      ]);
+    });
+
+    // GRAND TOTAL
+    body.push([
+      "",
+      "",
+      { text: "Grand Total", bold: true },
+      "",
+      grandTotal.tokens,
+      grandTotal.completed,
+      grandTotal.cancelled,
+      grandTotal.autoClosed,
+    ]);
+  }
+
+  // ================= PDF DEFINITION =================
+  const docDefinition: any = {
+    pageOrientation: "landscape",
+    pageSize: "A4",
+
+    header: {
+      margin: [40, 20, 40, 0],
+      columns: [
+        { image: logoBase64, width: 120 },
+        {
+          stack: [
+            {
+              text: "UTKAL HEALTHCARE PRIVATE LIMITED",
+              alignment: "center",
+              bold: true,
+              fontSize: 20,
+              margin: [0, 0, 0, 10],
+            },
+            {
+              text: "C/3, NILADRI VIHAR, CHANDRASEKHARPUR, BHUBANESHWAR - 751021",
+              alignment: "center",
+              bold: true,
+              fontSize: 15,
+              characterSpacing: 1.3,
+              margin: [0, 0, 0, 5],
+            },
+            {
+              text: "CONTACT : 0674-2651200/201   MOB : +91 6370704001/4002",
+              alignment: "center",
+              bold: true,
+              fontSize: 15,
+              characterSpacing: 1.3,
+              margin: [0, 0, 0, 15],
+            },
+          ],
+        },
+      ],
+    },
+
+    content: [
+      {
+        text:
+          reportType === "summary"
+            ? "Category Wise Summary Report:"
+            : "Category Wise Detailed Report:",
+        style: "header",
+        alignment: "left",
+        margin: [0, 0, 0, 15],
+      },
+      {
+        table: {
+          headerRows: 1,
+          widths:
+            reportType === "summary"
+              ? ["auto", "*", "auto", "auto", "auto", "auto"]
+              : ["auto", "*", "*", "*", "auto", "auto", "auto", "auto"],
+          body,
+        },
+      },
+    ],
+
+    styles: {
+      header: {
+        fontSize: 16,
+        bold: true,
+      },
+      tableHeader: {
+        bold: true,
+        fillColor: "#22c55e",
+        color: "white",
+        alignment: "center",
+      },
+    },
+
+    pageMargins: [40, 100, 40, 60],
+  };
+
+  pdfMake
+    .createPdf(docDefinition)
+    .download(
+      reportType === "summary"
+        ? "CategoryWiseSummaryReport.pdf"
+        : "CategoryWiseDetailedReport.pdf"
+    );
+};
+
+
+
+
+
+const fetchDetailedReport = async () => {
+  try {
+    setLoading(true);
+
+    const res = await API.getReportbyCategoryAndSubCategoryDetail({
+      CategoryId: categoryFilter || undefined,
+      SubCategoryId: subcategoryFilter || undefined,
+      PageNumber: pageNumber,
+      PageSize: pageSize,
+    });
+
+    const apiData = Array.isArray(res.data) ? res.data : [];
+
+    // ⚠️ backend is not sending totalRecords
+    setTotalRecords(apiData.length);
+
+    const mapped: CategoryRow[] = apiData.map(
+      (item: any, index: number) => ({
+        id: index + 1 + (pageNumber - 1) * pageSize,
+        date: item.Date,
+        categoryId: item.CategoryId,
+        category: item.Category,
+        subCategoryId: item.SubCategoryId,
+        subcategory: item.SubCategory,
+        tokens: item.NoOfToken,
+        completed: item.Completed,
+        cancelled: item.Cancelled,
+        autoClosed: item.AutoClosed,
+      })
+    );
+
+    setData(mapped);
+  } catch (error) {
+    console.error("Failed to fetch detailed report", error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+
+
+const fetchSummaryReport = async () => {
   try {
     setLoading(true);
 
@@ -55,21 +312,22 @@ const CatagorywiseReport = () => {
       PageNumber: pageNumber,
       PageSize: pageSize,
     });
+      const apiData = Array.isArray(res.data) ? res.data : [];
+      setTotalRecords(apiData.length);
 
-    const apiData = res.data?.data || [];
-
-    setTotalRecords(res.data?.totalRecords || 0);
 
     const mapped: CategoryRow[] = apiData.map(
       (item: any, index: number) => ({
         id: index + 1,
-        date: item.date,
-        category: item.category,
-        subcategory: item.subcategory,
-        tokens: item.tokens,
-        completed: item.completed, 
-        cancelled: item.cancelled,
-        autoClosed: item.autoClosed,
+        date: "",
+        categoryId: item.CategoryId,
+        category: item.Category,
+        subCategoryId: 0,
+        subcategory: "",
+        tokens: item.NoOfToken,
+        completed: item.Completed,
+        cancelled: item.Cancelled,
+        autoClosed: item.AutoClosed,
       })
     );
 
@@ -80,6 +338,7 @@ const CatagorywiseReport = () => {
     setLoading(false);
   }
 };
+
 
 
   /* ---------- DROPDOWNS (derived) ---------- */
@@ -141,7 +400,7 @@ const CatagorywiseReport = () => {
 
   /* ---------- ACTIONS ---------- */
 
-  const handlePrint = () => window.print();
+  // const handlePrint = () => window.print();
 
   const exportToExcel = () => {
     const exportData =

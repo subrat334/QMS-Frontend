@@ -8,7 +8,7 @@ import { API } from "../../services/AllApiServices";
 import pdfMake from "pdfmake/build/pdfmake";
 import pdfFonts from "pdfmake/build/vfs_fonts";
 import type { TDocumentDefinitions } from "pdfmake/interfaces";
-import logo from "../../assets/Utkal_BW_Logo.png";
+import logo from "../../assets/utkal.png";
 
 (pdfMake as any).vfs = pdfFonts.vfs;
 
@@ -99,35 +99,52 @@ const handlePdfDownload = async () => {
 
   const body: any[] = [];
 
+  // =========================
   // TABLE HEADER
+  // =========================
   body.push([
-    { text: "Sr.No", style: "tableHeader" },
-    { text: "Date & Time", style: "tableHeader" },
-    { text: "Token", style: "tableHeader" },
-    { text: "Mobile", style: "tableHeader" },
-    { text: "Category", style: "tableHeader" },
-    { text: "Sub-Category", style: "tableHeader" },
-    { text: "User", style: "tableHeader" },
-    { text: "TAT1", style: "tableHeader" },
-    { text: "TAT2", style: "tableHeader" },
-    { text: "TAT3", style: "tableHeader" },
-    { text: "Status", style: "tableHeader" },
-  ]);
+    "Sr.No",
+    "Date(T1)",
+    "Token",
+    "Mobile",
+    "Category",
+    "Sub-Category",
+    "User",
+    "Call Time (T2)",
+    "Receive Time (T3)",
+    "Complete Time (T4)",
+    "TAT1",
+    "TAT2",
+    "TAT3",
+    "Remarks",
+    "Status",
+  ].map(h => ({ text: h, style: "tableHeader" })));
 
+  // =========================
   // TABLE DATA
+  // =========================
   filteredReports.forEach((r, i) => {
     body.push([
       i + 1,
-      formatDateTime24(r.DateAndTime),
+      formatTime24(r.DateAndTime),
       r.Token,
       r.MobileNumber,
       r.Category,
       r.SubCategory,
       r.UserName,
-      r.TAT1 ?? calculateTAT(r.DateAndTime, r.CallTime),
-      r.TAT2 ?? calculateTAT(r.DateAndTime, r.ReceiveTime),
-      r.TAT3 ?? calculateTAT(r.ReceiveTime, r.CompleteTime),
-      r.Status,
+      formatTime24(r.CallTime),
+      formatTime24(r.ReceiveTime),
+      formatTime24(r.CompleteTime),
+      calculateTAT(r.DateAndTime, r.CallTime),
+      calculateTAT(r.DateAndTime, r.ReceiveTime),
+      calculateTAT(r.ReceiveTime, r.CompleteTime),
+      r.Remarks || "-",
+      {
+        text: r.Status,
+        bold: true,
+        color: r.Status === "DONE" ? "#15803d" : "#b91c1c",
+        alignment: "center",
+      },
     ]);
   });
 
@@ -135,35 +152,32 @@ const handlePdfDownload = async () => {
     pageOrientation: "landscape",
     pageSize: "A4",
 
-    header: {
-      margin: [40, 20, 40, 0],
-      columns: [
-        { image: logoBase64, width: 120 },
+    pageMargins: [20, 95, 20, 40],
 
+    header: {
+      margin: [20, 20, 20, 0],
+      columns: [
+        { image: logoBase64, width: 90 },
         {
           stack: [
             {
               text: "UTKAL HEALTHCARE PRIVATE LIMITED",
               alignment: "center",
               bold: true,
-              fontSize: 20,
-              margin: [0, 0, 0, 10],
+              fontSize: 16,
             },
             {
-              text: "C/3, NILADRI VIHAR, CHANDRASEKHARPUR, BHUBANESHWAR - 751021",
+              text:
+                "C/3, NILADRI VIHAR, CHANDRASEKHARPUR, BHUBANESHWAR - 751021",
               alignment: "center",
-              bold: true,
-              fontSize: 15,
-              characterSpacing: 1.3,
-              margin: [0, 0, 0, 5],
+              fontSize: 11,
             },
             {
-              text: "CONTACT : 0674-2651200/201   MOB : +91 6370704001/4002",
+              text:
+                "CONTACT : 0674-2651200/201   MOB : +91 6370704001/4002",
               alignment: "center",
-              bold: true,
-              fontSize: 15,
-              characterSpacing: 1.3,
-              margin: [0, 0, 0, 15],
+              fontSize: 11,
+              margin: [0, 3, 0, 0],
             },
           ],
         },
@@ -174,12 +188,29 @@ const handlePdfDownload = async () => {
       {
         text: `Date Wise Report (${fromDate} to ${toDate})`,
         style: "header",
-        margin: [0, 0, 0, 15],
+        margin: [0, 8, 0, 10],
       },
       {
         table: {
           headerRows: 1,
-          widths: ["auto", "*", "auto", "*", "*", "*", "*", "auto", "auto", "auto", "auto"],
+          dontBreakRows: true,
+          widths: [
+            15,   // Sr.No
+            40,   // Date & Time
+            40,   // Token
+            55,   // Mobile
+            50,   // Category
+            50,   // Sub-Category
+            50,   // User
+            30,   // Call
+            30,   // Receive
+            30,   // Complete
+            35,   // TAT1
+            35,   // TAT2
+            35,   // TAT3
+            55,   // Remarks
+            40,   // Status
+          ],
           body,
         },
         layout: "lightHorizontalLines",
@@ -187,21 +218,27 @@ const handlePdfDownload = async () => {
     ],
 
     styles: {
-      header: { fontSize: 16, bold: true },
+      header: {
+        fontSize: 14,
+        bold: true,
+      },
       tableHeader: {
         bold: true,
-        fillColor: "#22c55e",
+        fontSize: 8,
+        fillColor: "#16a34a",
         color: "white",
         alignment: "center",
-        fontSize: 10,
       },
     },
 
-    pageMargins: [40, 100, 40, 60],
+    defaultStyle: {
+      fontSize: 8,
+    },
   };
 
   pdfMake.createPdf(docDefinition).download("DatewiseReport.pdf");
 };
+
 
 const fetchReports = async (from: string, to: string) => {
   try {
@@ -267,29 +304,29 @@ const fetchReports = async (from: string, to: string) => {
   };
 
   // Function to calculate TAT
-  const calculateTAT = (start: string, end: string): string => {
-    const parseDateTime = (str: string): Date => {
-      const datePartMatch = str.match(/(\d{4}-\d{2}-\d{2})/);
-      const timePartMatch = str.match(/(\d{1,2}:\d{2}\s?(AM|PM)?)/i);
-      const datePart = datePartMatch ? datePartMatch[1] : "2025-11-10";
-      const timePart = timePartMatch ? timePartMatch[1] : "00:00 AM";
-      return new Date(`${datePart} ${timePart}`);
-    };
+ const calculateTAT = (start: string, end: string): string => {
+  if (!start || !end) return "N/A";
 
-    try {
-      const startDate = parseDateTime(start);
-      const endDate = parseDateTime(end);
-      const diffMs = endDate.getTime() - startDate.getTime();
-      if (diffMs < 0) return "Invalid";
-      const diffMinutes = Math.floor(diffMs / (1000 * 60));
-      if (diffMinutes < 60) return `${diffMinutes} min`;
-      const hours = Math.floor(diffMinutes / 60);
-      const minutes = diffMinutes % 60;
-      return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-    } catch {
-      return "N/A";
-    }
-  };
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    return "Invalid";
+  }
+
+  const diffMs = endDate.getTime() - startDate.getTime();
+  if (diffMs < 0) return "Invalid";
+
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+  if (diffMinutes < 60) return `${diffMinutes} min`;
+
+  const hours = Math.floor(diffMinutes / 60);
+  const minutes = diffMinutes % 60;
+
+  return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+};
+
 
   // 🔹 Filter reports by selected date
   
@@ -317,28 +354,32 @@ const filteredReports = reports.filter((r) => {
 
   return true;
 });
-const formatDateTime24 = (value: string) => {
-  if (!value) return "-";
-  const d = new Date(value);
-  return d.toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-};
+
+
+// const formatDateTime24 = (value: string) => {
+//   if (!value) return "-";
+//   const d = new Date(value);
+//   return d.toLocaleString("en-IN", {
+//     day: "2-digit",
+//     month: "2-digit",
+//     year: "numeric",
+//     hour: "2-digit",
+//     minute: "2-digit",
+//     hour12: false,
+//   });
+// };
 
 const formatTime24 = (value: string) => {
   if (!value) return "-";
-  const d = new Date(`1970-01-01 ${value}`);
+  const d = new Date(value); // ISO string
+  if (isNaN(d.getTime())) return "Invalid";
   return d.toLocaleTimeString("en-IN", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
   });
 };
+
 
 
 
@@ -522,7 +563,7 @@ const formatTime24 = (value: string) => {
         <td className="px-3 py-2">{i + 1}</td>
 
         <td className="px-3 py-2">
-          {formatDateTime24(r.DateAndTime)}
+          {formatTime24(r.DateAndTime)}
         </td>
 
         <td className="px-3 py-2 font-medium text-gray-800">

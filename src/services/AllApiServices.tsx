@@ -303,6 +303,24 @@ getReportByCategoryAndSubCategory: (params: {
       ...params,
     },
   }),
+
+  // -------------------------------------------------------
+// CATEGORY & SUBCATEGORY REPORT (DETAILED)
+// -------------------------------------------------------
+getReportbyCategoryAndSubCategoryDetail: (params: {
+  CategoryId?: number;
+  SubCategoryId?: number;
+  PageNumber?: number;
+  PageSize?: number;
+}) =>
+  api.get("/Report/getReportbyCategoryAndSubCategoryDetail", {
+    params: {
+      PageNumber: 1,
+      PageSize: 10,
+      ...params,
+    },
+  }),
+
 }
 
 // import api from "./api";
