@@ -138,7 +138,10 @@ const handlePdfDownload = async () => {
       calculateTAT(r.DateAndTime, r.CallTime),
       calculateTAT(r.DateAndTime, r.ReceiveTime),
       calculateTAT(r.ReceiveTime, r.CompleteTime),
-      r.Remarks || "-",
+       {
+      text: r.Remarks?.trim() ? r.Remarks : "-",
+      noWrap: false,
+    },
       {
         text: r.Status,
         bold: true,
@@ -198,7 +201,7 @@ const handlePdfDownload = async () => {
             15,   // Sr.No
             40,   // Date & Time
             40,   // Token
-            55,   // Mobile
+            50,   // Mobile
             50,   // Category
             50,   // Sub-Category
             50,   // User
@@ -208,7 +211,7 @@ const handlePdfDownload = async () => {
             35,   // TAT1
             35,   // TAT2
             35,   // TAT3
-            55,   // Remarks
+            80,   // Remarks
             40,   // Status
           ],
           body,

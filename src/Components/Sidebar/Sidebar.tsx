@@ -357,8 +357,8 @@ const Sidebar = ({ collapsed, setCollapsed }: SidebarProps) => {
         {/* User Panel */}
         {user && !collapsed && (
           <div className="px-3 py-3 mb-4 bg-green-600 rounded-xl">
-            <p className="text-sm font-semibold">{user.name}</p>
-            <p className="text-xs opacity-90">Emp ID: {user.id}</p>
+            <p className="text-sm font-semibold">{`Welcome: ${user.name}`}</p>
+            {/* <p className="text-xs opacity-90">Emp ID: {user.id}</p> */}
             <p className="text-xs opacity-90">
               Role: {getRoleLabel(user.userType)}
             </p>
