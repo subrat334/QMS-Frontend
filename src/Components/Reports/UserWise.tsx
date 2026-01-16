@@ -73,6 +73,9 @@ const UserwiseReport = () => {
   const [error, setError] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate,   setToDate] = useState("");
+  const [appliedFromDate, setAppliedFromDate] = useState("");
+  const [appliedToDate, setAppliedToDate] = useState("");
+
 
   const fetchDetailedReport = async () => {
   try {
@@ -87,8 +90,9 @@ const UserwiseReport = () => {
       Numbers: Number(filters.numbers) || 0,
 
       // ✅ DATE FILTERS
-      StartDate: fromDate || undefined,
-      EndDate: toDate || undefined,
+     StartDate: appliedFromDate || undefined,
+     EndDate: appliedToDate || undefined,
+
     });
 
     setDetailData(res.data ?? []);
@@ -171,13 +175,21 @@ const detailedRows = Object.values(groupedDetailData);
 //   }
 // }, [filters, reportType]);
 
+  // useEffect(() => {
+  //   if (reportType === "summary") {
+  //     fetchReport();
+  //   } else {
+  //     fetchDetailedReport();
+  //   }
+  // }, [filters, reportType, fromDate, toDate]);
   useEffect(() => {
-    if (reportType === "summary") {
-      fetchReport();
-    } else {
-      fetchDetailedReport();
-    }
-  }, [filters, reportType, fromDate, toDate]);
+  if (reportType === "summary") {
+    fetchReport();
+  } else {
+    fetchDetailedReport();
+  }
+}, [filters, reportType, appliedFromDate, appliedToDate]);
+
 
 
 
@@ -187,7 +199,7 @@ const detailedRows = Object.values(groupedDetailData);
       const body: any[] = [];
 
       body.push([
-        { text: "Sr.No", style: "tableHeader" },
+        { text: "Sl.No", style: "tableHeader" },
         { text: "User Name", style: "tableHeader" },
         { text: "User ID", style: "tableHeader" },
         { text: "Category", style: "tableHeader" },
@@ -372,19 +384,31 @@ const detailedRows = Object.values(groupedDetailData);
             className="border border-gray-300 rounded-md px-2 py-1 text-sm"
           />
         </div>
+        <button
+          onClick={() => {
+            setAppliedFromDate(fromDate);
+            setAppliedToDate(toDate);
+          }}
+          disabled={!fromDate || !toDate}
+          className="bg-green-600 text-white px-4 py-1 rounded-md text-sm disabled:opacity-50"
+        >
+          Go
+        </button>
+
 
         {/* Clear Button */}
-        {(fromDate || toDate) && (
-          <button
-            onClick={() => {
-              setFromDate("");
-              setToDate("");
-            }}
-            className="text-sm text-blue-600 underline"
-          >
-            Clear
-          </button>
-        )}
+       <button
+  onClick={() => {
+    setFromDate("");
+    setToDate("");
+    setAppliedFromDate("");
+    setAppliedToDate("");
+  }}
+  className="text-sm text-blue-600 underline"
+>
+  Clear
+</button>
+
 
       </div>
 
@@ -404,11 +428,15 @@ const detailedRows = Object.values(groupedDetailData);
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-lg shadow-md">
+      {/* <div className="overflow-x-auto rounded-lg shadow-md"> */}
+      <div className="overflow-auto rounded-lg shadow-md max-h-[700px]">
+
         <table className="min-w-full text-sm text-gray-700 bg-white border border-gray-200">
-          <thead className="bg-green-600 text-white text-center">
+          {/* <thead className="bg-green-600 text-white text-center"> */}
+          <thead className="bg-green-600 text-white text-center sticky top-0 z-20">
+
             <tr>
-              <th className="px-3 py-2">Sr.No</th>
+              <th className="px-3 py-2">Sl.No</th>
               <th className="px-3 py-2">User Name</th>
               <th className="px-3 py-2">User ID</th>
               <th className="px-3 py-2">Category</th>
@@ -416,7 +444,9 @@ const detailedRows = Object.values(groupedDetailData);
               <th className="px-3 py-2">Numbers</th>
             </tr>
             {/* Filters */}
-            <tr className="bg-green-50 text-gray-700 text-center">
+            {/* <tr className="bg-green-50 text-gray-700 text-center"> */}
+            <tr className="bg-green-50 text-gray-700 text-center sticky top-10 z-10">
+
               <td></td>
               <td className="px-2 py-1">
                 <input
@@ -465,13 +495,13 @@ const detailedRows = Object.values(groupedDetailData);
                 </select>
               </td>
               <td className="px-2 py-1">
-                <input
+                {/* <input
                   type="text"
                   value={filters.numbers}
                   onChange={(e) => handleFilterChange("numbers", e.target.value)}
                   placeholder="Search no."
                   className="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
-                />
+                /> */}
               </td>
             </tr>
           </thead>

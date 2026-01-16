@@ -299,7 +299,7 @@ getReportByCategoryAndSubCategory: (params: {
   api.get("/Report/getReportbyCategoryAndSubCategory", {
     params: {
       PageNumber: 1,
-      PageSize: 10,
+      // PageSize: 10,
       ...params,
     },
   }),

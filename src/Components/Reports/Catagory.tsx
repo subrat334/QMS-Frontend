@@ -579,23 +579,23 @@ const fetchSummaryReport = async () => {
 
       {/* PAGINATION */}
       <div className="flex justify-end gap-3 mt-4">
-        <button
+        {/* <button
           disabled={pageNumber === 1}
           onClick={() => setPageNumber(p => p - 1)}
           className="px-3 py-1 border rounded disabled:opacity-50"
         >
           Previous
-        </button>
+        </button> */}
 
         <span className="text-sm">Page {pageNumber}</span>
 
-        <button
+        {/* <button
           disabled={pageNumber * pageSize >= totalRecords}
           onClick={() => setPageNumber(p => p + 1)}
           className="px-3 py-1 border rounded disabled:opacity-50"
         >
           Next
-        </button>
+        </button> */}
       </div>
     </div>
   );
