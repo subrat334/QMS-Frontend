@@ -77,7 +77,8 @@ export type ConsecutiveBasisType = typeof CONSECUTIVE_BASIS[keyof typeof CONSECU
 // ------------------------------------------
 export const API_URLS = {
   LOCAL: "http://10.0.0.25/backend/api/",
-  DEV: "https://angular-dev.smaketsolutions.com/backend/api",
+  // DEV: "https://angular-dev.smaketsolutions.com/backend/api",
+  DEV: "http://13.202.228.79/backend/api",
 } as const;
 
 // SIGNALR HUB URL CONSTANTS
