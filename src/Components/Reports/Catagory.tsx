@@ -11,16 +11,6 @@ import logo from "../../assets/utkal.png";
 
 /* ===================== INTERFACES ===================== */
 
-// interface CategoryRow {
-//   id: number; 
-//   date: string;
-//   category: string;
-//   subcategory: string;
-//   tokens: number;
-//   completed: number;
-//   cancelled: number;
-//   autoClosed: number;
-// }
 
 interface CategoryRow {
   id: number;
@@ -57,14 +47,6 @@ const CatagorywiseReport = () => {
     useState<"summary" | "detailed">("summary");
 
   const [pageNumber, setPageNumber] = useState(1);
-  const [pageSize] = useState(10);
-  const [totalRecords, setTotalRecords] = useState(0);
-
-  /* ---------- API CALL ---------- */
-
-  // useEffect(() => {
-  //   fetchReport();
-  // }, [categoryFilter, subcategoryFilter, pageNumber]);
 
   useEffect(() => {
   setPageNumber(1); // reset page when mode/filter changes
@@ -259,39 +241,53 @@ const handlePrint = async () => {
 
 
 
-
 const fetchDetailedReport = async () => {
   try {
     setLoading(true);
 
+  const PAGE_SIZE = 50;
+  let page = 1;
+  let allData: CategoryRow[] = [];
+  let totalRowCount = 0;
+
+  do {
     const res = await API.getReportbyCategoryAndSubCategoryDetail({
       CategoryId: categoryFilter || undefined,
       SubCategoryId: subcategoryFilter || undefined,
-      PageNumber: pageNumber,
-      PageSize: pageSize,
+      PageNumber: page,
+      PageSize: PAGE_SIZE,
     });
 
     const apiData = Array.isArray(res.data) ? res.data : [];
+    if (apiData.length === 0) break;
 
-    // ⚠️ backend is not sending totalRecords
-    setTotalRecords(apiData.length);
+    //  NEW: Read total count from backend
+    totalRowCount = apiData[0]?.TotalRowCount ?? 0;
 
     const mapped: CategoryRow[] = apiData.map(
       (item: any, index: number) => ({
-        id: index + 1 + (pageNumber - 1) * pageSize,
+        id: allData.length + index + 1,
         date: item.Date,
         categoryId: item.CategoryId,
         category: item.Category,
         subCategoryId: item.SubCategoryId,
         subcategory: item.SubCategory,
-        tokens: item.NoOfToken,
-        completed: item.Completed,
-        cancelled: item.Cancelled,
-        autoClosed: item.AutoClosed,
+        tokens: Number(item.Numbers ?? 0),
+        completed: Number(item.Completed ?? 0),
+        cancelled: Number(item.Cancelled ?? 0),
+        autoClosed: Number(item.AutoClosed ?? 0),
       })
-    );
+);
 
-    setData(mapped);
+
+      allData = [...allData, ...mapped];
+      page++;
+
+    } while (allData.length < totalRowCount);
+
+    setData(allData);
+    // setTotalRecords(totalRowCount);
+
   } catch (error) {
     console.error("Failed to fetch detailed report", error);
   } finally {
@@ -306,40 +302,68 @@ const fetchSummaryReport = async () => {
   try {
     setLoading(true);
 
+  const PAGE_SIZE = 50; // Number of rows per API call
+  let page = 1;
+  let allData: CategoryRow[] = [];
+  let totalRowCount = 0;
+
+  do {
     const res = await API.getReportByCategoryAndSubCategory({
       CategoryId: categoryFilter || undefined,
       SubCategoryId: subcategoryFilter || undefined,
-      PageNumber: pageNumber,
-      PageSize: pageSize,
+      PageNumber: page,
+      PageSize: PAGE_SIZE,
     });
-      const apiData = Array.isArray(res.data) ? res.data : [];
-      setTotalRecords(apiData.length);
 
+      const apiData = Array.isArray(res.data) ? res.data : [];
+      if (apiData.length === 0) break;
+
+      //  Read TotalRowCount from backend (same for all rows)
+      totalRowCount = apiData[0]?.TotalRowCount ?? apiData.length;
 
     const mapped: CategoryRow[] = apiData.map(
       (item: any, index: number) => ({
-        id: index + 1,
+        id: allData.length + index + 1,
         date: "",
         categoryId: item.CategoryId,
         category: item.Category,
-        subCategoryId: 0,
-        subcategory: "",
-        tokens: item.NoOfToken,
-        completed: item.Completed,
-        cancelled: item.Cancelled,
-        autoClosed: item.AutoClosed,
+        subCategoryId: item.SubCategoryId ?? 0,
+        subcategory: item.SubCategory ?? "",
+        tokens: Number(item.Numbers ?? 0),
+        completed: Number(item.Completed ?? 0),
+        cancelled: Number(item.Cancelled ?? 0),
+        autoClosed: Number(item.AutoClosed ?? 0),
       })
     );
 
-    setData(mapped);
+
+      allData = [...allData, ...mapped]; // accumulate data
+      page++; // next page
+
+    } while (allData.length < totalRowCount); // stop when we have all rows
+
+    setData(allData);
+    // setTotalRecords(totalRowCount);
+
   } catch (error) {
-    console.error("Failed to fetch report", error);
+    console.error("Failed to fetch summary report", error);
   } finally {
     setLoading(false);
   }
 };
 
 
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return "-";
+  return new Date(dateStr).toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
 
   /* ---------- DROPDOWNS (derived) ---------- */
 
@@ -550,7 +574,9 @@ const fetchSummaryReport = async () => {
         {filteredData.map((row, i) => (
           <tr key={row.id} className="text-center border-b">
             <td className="px-3 py-2">{i + 1}</td>
-            <td className="px-3 py-2">{row.date}</td>
+            {/* <td className="px-3 py-2">{row.date}</td> */}
+            <td>{formatDate(row.date)}</td>
+
             <td className="px-3 py-2">{row.category}</td>
             <td className="px-3 py-2">{row.subcategory}</td>
             <td className="px-3 py-2 font-semibold text-green-700">{row.tokens}</td>

@@ -1,16 +1,6 @@
 // src/pages/Users.tsx
 import React, { useEffect, useState } from "react";
-import {
-  Pencil,
-  Trash2,
-  UserPlus,
-  UserCog,
-  Eye,
-  EyeOff,
-  Key,
-  ChevronRight
-  
-} from "lucide-react";
+import {Pencil,Trash2,UserPlus,UserCog,Eye,EyeOff,Key,ChevronRight} from "lucide-react";
 import toast from "react-hot-toast";
 import { API } from "../../services/AllApiServices";
 import { USER_ROLES } from "../../constants/AllConstants"; // adjust path if needed
@@ -232,6 +222,12 @@ const Users: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
+// Username existence check
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [isUsernameExists, setIsUsernameExists] = useState(false);
+  const [usernameError, setUsernameError] = useState("");
+  const [originalEmployeeId, setOriginalEmployeeId] = useState<string>(""); // for edit mode
+
 
   // Privilege selections
   // const [selectedCategoryId, setSelectedCategoryId] = useState<number | "">("");
@@ -430,11 +426,25 @@ const buildPrivilegesPayload = (userId: string) => {
 
   // -------------------- Create user + privileges --------------------
   const handleCreateUserAndPrivileges = async () => {
-    // validate
+  // ---------------- VALIDATION ----------------
+
+  //  Block if username already exists
+  if (isUsernameExists) {
+    toast.error("Employee ID / Username already exists");
+    return;
+  }
+
+  // Basic fields
     if (!name.trim() || !employeeId.trim() || !password.trim()) {
       toast.error("Please fill Name, Employee ID and Password");
       return;
     }
+
+    if (!confirmPassword.trim()) {
+      toast.error("Please confirm password");
+      return;
+    }
+
     if (password !== confirmPassword) {
       setPasswordError("Passwords do not match");
       return;
@@ -442,7 +452,7 @@ const buildPrivilegesPayload = (userId: string) => {
 
     // Privilege validations only for non-MIS
     if (!isMIS) {
-      if (!selectedCategoryIds) {
+      if (!selectedCategoryIds.length) {
         toast.error("Select a category for privileges");
         return;
       }
@@ -456,9 +466,10 @@ const buildPrivilegesPayload = (userId: string) => {
       }
     }
 
+    // ---------------- SUBMIT ----------------
     setIsSubmitting(true);
     try {
-      // 1) create user
+      //  Create user
       const createPayload = {
         FirstName: name.trim(),
         UserType: designation,
@@ -471,17 +482,16 @@ const buildPrivilegesPayload = (userId: string) => {
       const newUserId = createRes.data?.NewUserId;
       if (!newUserId) {
         toast.error("User creation failed");
-        setIsSubmitting(false);
         return;
       }
 
-      // 2) create privileges - SKIP for MIS
+      //  Create privileges (skip for MIS)
       if (!isMIS) {
         const privilPayload = buildPrivilegesPayload(newUserId);
         await API.createUserPrivilege(privilPayload);
       }
 
-      toast.success(isMIS ? "MIS user created" : "User created and privileges assigned");
+      toast.success(isMIS ? "MIS user created successfully" : "User created and privileges assigned");
       resetForm();
       await loadUsers();
     } catch (err: any) {
@@ -493,7 +503,10 @@ const buildPrivilegesPayload = (userId: string) => {
     }
   };
 
-const isCreateFormValid = (() => {
+  const isCreateFormValid = (() => {
+    //  Block if username already exists
+    if (isUsernameExists) return false;
+
   // Basic fields
   if (
     !name.trim() ||
@@ -554,7 +567,7 @@ const isCreateFormValid = (() => {
     toast.success("User details & privileges updated successfully");
 
       resetForm();
-      await loadUsers(); // ✅ correct function
+      await loadUsers(); //  correct function
     } catch (err: any) {
       console.error(err);
       toast.error(
@@ -592,6 +605,8 @@ const isCreateFormValid = (() => {
     // ---------------- Top-level info ----------------
     setName(d.Name || "");
     setEmployeeId(d.EmployeeID || "");
+    setOriginalEmployeeId(d.EmployeeID || ""); //  IMPORTANT FIX
+
     const ut = String(d.UserType || "").toLowerCase();
 
     switch (ut) {
@@ -603,7 +618,7 @@ const isCreateFormValid = (() => {
         setDesignation(USER_ROLES.MONITOR);
         break;
 
-      case "receptionist":        // ✅ added
+      case "receptionist":
       case "patient":
         setDesignation(USER_ROLES.PATIENT_SCREEN);
         break;
@@ -613,25 +628,20 @@ const isCreateFormValid = (() => {
         break;
 
       default:
-        console.warn("Unknown UserType:", d.UserType);
         setDesignation(USER_ROLES.COUNTER);
     }
-
-
 
     setEditUserId(d.UserId);
     setPasswordEditMode(false);
     setPasswordEditUserId(null);
 
-    // ---------------- FIX: Prefill ALL categories ----------------
+    // ---------------- Categories ----------------
     if (Array.isArray(d.Categories) && d.Categories.length > 0) {
-      // 1️⃣ Categories
       const categoryIds = d.Categories.map((c: any) =>
         Number(c.CategoryId)
       );
       setSelectedCategoryIds(categoryIds);
 
-      // 2️⃣ Subcategories & Counters
       const subIds: number[] = [];
       const counterIds: number[] = [];
 
@@ -649,46 +659,18 @@ const isCreateFormValid = (() => {
       setSelectedSubcategories(subIds);
       setSelectedCounterIds(counterIds);
 
-      // 3️⃣ Fetch counters for each subcategory
       for (const subId of subIds) {
         try {
-          setLoadingCountersBySubcat((prev) => ({
-            ...prev,
-            [subId]: true,
-          }));
-
           const resC = await API.getCountersBySubCategoryId(subId);
-          const received: any[] = resC.data || [];
-
-          const subInfo = subcategories.find(
-            (s) => s.SubCategoryId === subId
-          );
-
-          const normalized = received.map((c: any) => ({
-            Id: Number(c.CounterId),
-            CounterId: Number(c.CounterId),
-            Name: c.CounterName,
-            CategoryId: subInfo?.CategoryId ?? 0,
-            CategoryName: subInfo?.Categoryname ?? "",
-            SubCategoryId: subId,
-            SubCategoryName: subInfo?.SubCategoryname ?? "",
-          }));
-
           setSubcatCounters((prev) => ({
             ...prev,
-            [subId]: normalized,
+            [subId]: resC.data || [],
           }));
         } catch (err) {
-          console.warn("prefetch counters for edit failed:", subId, err);
-        } finally {
-          setLoadingCountersBySubcat((prev) => ({
-            ...prev,
-            [subId]: false,
-          }));
+          console.warn("Counter fetch failed:", subId);
         }
       }
     } else {
-      // No categories
       setSelectedCategoryIds([]);
       setSelectedSubcategories([]);
       setSelectedCounterIds([]);
@@ -803,32 +785,54 @@ const handleCancelEdit = () => {
   setConfirmPassword("");
 };
 
+// -------------------- Username existence check --------------------
 
-      // const handleToggleUserStatus = async (
-      //   userId: string,
-      //   currentStatus?: boolean
-      // ) => {
-      //   const newStatus = !(currentStatus ?? true);
+useEffect(() => {
+  // Skip empty
+  if (!employeeId.trim()) {
+    setIsUsernameExists(false);
+    setUsernameError("");
+    return;
+  }
 
-      //   try {
-      //     await API.updateUserActiveStatus(userId, newStatus);
+  // Skip check in edit mode if username not changed
+  if (isEditMode && employeeId === originalEmployeeId) {
+    setIsUsernameExists(false);
+    setUsernameError("");
+    return;
+  }
 
-      //     setUsers(prevUsers =>
-      //       prevUsers.map(user =>
-      //         user.UserId === userId
-      //           ? { ...user, IsActive: newStatus }
-      //           : user
-      //       )
-      //     );
+  const timer = setTimeout(async () => {
+    try {
+      setIsCheckingUsername(true);
+      const res = await API.isUserExist(employeeId.trim());
 
-      //     toast.success(
-      //       `User ${newStatus ? "activated" : "deactivated"}`
-      //     );
-      //   } catch (error) {
-      //     console.error(error);
-      //     toast.error("Failed to update user status");
-      //   }
-      // };
+      /**
+       * BACKEND RESPONSE HANDLING
+       * Adjust if backend sends true/false differently
+       */
+      const exists =
+        res?.data === true ||
+        res?.data?.exists === true ||
+        res?.data?.IsExist === true;
+
+      if (exists) {
+        setIsUsernameExists(true);
+        setUsernameError("Employee ID / Username already exists");
+      } else {
+        setIsUsernameExists(false);
+        setUsernameError("");
+      }
+    } catch (err) {
+      console.error("Username check failed", err);
+    } finally {
+      setIsCheckingUsername(false);
+    }
+  }, 600); //  debounce delay
+
+  return () => clearTimeout(timer);
+}, [employeeId, isEditMode]);
+
 
 
 
@@ -935,16 +939,36 @@ const handleCancelEdit = () => {
 
               {/* Employee ID */}
               <div>
-                <label className="block mb-1 font-medium text-green-800">Employee ID/User Name</label>
+                <label className="block mb-1 font-medium text-green-800">
+          Employee ID / User Name
+        </label>
+
                <input
                   type="text"
                   value={employeeId}
                   onChange={(e) => handleEmployeeIdChange(e.target.value)}
                   placeholder="Enter employee id"
-                  className="w-full border border-green-200 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500"
-                />
+                  className={`w-full border rounded-md px-3 py-2 focus:ring-2
+            ${
+              usernameError
+                ? "border-red-500 focus:ring-red-500"
+                : "border-green-200 focus:ring-green-500"
+            }`}
+        />
 
-              </div>
+        {isCheckingUsername && (
+          <p className="text-sm text-gray-500 mt-1">
+            Checking availability...
+          </p>
+        )}
+
+        {usernameError && (
+          <p className="text-sm text-red-600 mt-1">
+            {usernameError}
+          </p>
+        )}
+      </div>
+
 
             {/* Password & Confirm Password - HIDE IN EDIT MODE */}
 {!isEditMode && (
@@ -1123,20 +1147,20 @@ const handleCancelEdit = () => {
                 selectedIds={selectedSubcategories}
 
                 onChange={async (newIds) => {
-                  // 1️⃣ Find added subcategories
+                  //  Find added subcategories
                   const added = newIds.filter(
                     id => !selectedSubcategories.includes(id)
                   );
 
-                  // 2️⃣ Find removed subcategories
+                  //  Find removed subcategories
                   const removed = selectedSubcategories.filter(
                     id => !newIds.includes(id)
                   );
 
-                  // 3️⃣ Update state
+                  // Update state
                   setSelectedSubcategories(newIds);
 
-                  // 4️⃣ Handle REMOVED subcategories
+                  //  Handle REMOVED subcategories
                   if (removed.length > 0) {
                     setSelectedCounterIds(prev =>
                       prev.filter(cid => {
@@ -1152,7 +1176,7 @@ const handleCancelEdit = () => {
                     });
                   }
 
-                  // 5️⃣ Handle ADDED subcategories → CALL API 🔥
+                  //  Handle ADDED subcategories → CALL API 
                   for (const subId of added) {
                     try {
                       setLoadingCountersBySubcat(prev => ({
@@ -1275,12 +1299,12 @@ const handleCancelEdit = () => {
               ) : (
                 <button
                   onClick={handleCreateUserAndPrivileges}
-                  disabled={isSubmitting || !isCreateFormValid}
+                  disabled={isSubmitting ||isCheckingUsername ||  !isCreateFormValid}
                   className={`px-4 py-2 rounded text-white
-                    ${isSubmitting || !isCreateFormValid ? "bg-gray-400 cursor-not-allowed" : "bg-green-700 hover:bg-green-800"}
+                    ${isSubmitting || isCheckingUsername || !isCreateFormValid ? "bg-gray-400 cursor-not-allowed" : "bg-green-700 hover:bg-green-800"}
                   `}
                 >
-                  {isSubmitting ? "Creating..." : "➕ Add User"}
+                  {isSubmitting ? "Creating...": isCheckingUsername ? "Checking..." : "➕ Add User"}
                 </button>
               )}
             </div>

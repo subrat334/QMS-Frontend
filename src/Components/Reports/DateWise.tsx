@@ -1,5 +1,4 @@
 
-
 import { useState, useEffect} from "react";
 import * as XLSX from "xlsx";
 // import jsPDF from "jspdf";
@@ -30,11 +29,11 @@ interface BackendReport {
   TAT1: string;
   TAT2: string;
   TAT3: string;
-  Status: "DONE" | "CANCELLED" | string;
+  Status: "DONE" | "CANCELLED" | "AUTOCLOSE";
   UserTypeName: string;
   UserTypeId: string;
   UserId: string;
-
+  TotalRowCount?: number;
   Remarks: string;
 }
 
@@ -47,8 +46,21 @@ const DatewiseReport = () => {
   const [subcategoryFilter, setSubcategoryFilter] = useState("");
   const [userFilter, setUserFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const uniqueCategories = Array.from(new Set(reports.map(r => r.Category)));
-  const uniqueSubcategories = Array.from(new Set(reports.map(r => r.SubCategory)));
+  // const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
+
+  const today = new Date().toISOString().split("T")[0];
+
+  /* ================= DERIVED DATA ================= */
+
+  const uniqueSubcategories = Array.from(new Set(reports.filter(r =>
+      categoryFilter ? r.Category === categoryFilter : true
+        )
+        .map(r => r.SubCategory)
+    )
+);
+
+
+
   const uniqueUsers = Array.from(new Set(reports.map(r => r.UserName)));
   const uniqueStatuses = Array.from(new Set(reports.map(r => r.Status)));
 
@@ -73,6 +85,14 @@ const DatewiseReport = () => {
       fetchReports(fromDate, toDate);
     }
   }, [fromDate, toDate]);
+
+  const categoryMap = Array.from(
+  new Map(
+    reports.map(r => [r.Category, r.CategoryId])
+  )
+);
+
+// const uniqueCategories = categoryMap.map(([name]) => name);
 
 
 
@@ -167,12 +187,14 @@ const handlePdfDownload = async () => {
               text: "UTKAL HEALTHCARE PRIVATE LIMITED",
               alignment: "center",
               bold: true,
+              characterSpacing: 1.3,
               fontSize: 16,
             },
             {
               text:
                 "C/3, NILADRI VIHAR, CHANDRASEKHARPUR, BHUBANESHWAR - 751021",
               alignment: "center",
+              characterSpacing: 1.3,
               fontSize: 11,
             },
             {
@@ -180,6 +202,7 @@ const handlePdfDownload = async () => {
                 "CONTACT : 0674-2651200/201   MOB : +91 6370704001/4002",
               alignment: "center",
               fontSize: 11,
+              characterSpacing: 1.3,
               margin: [0, 3, 0, 0],
             },
           ],
@@ -199,8 +222,8 @@ const handlePdfDownload = async () => {
           dontBreakRows: true,
           widths: [
             15,   // Sr.No
-            40,   // Date & Time
-            40,   // Token
+            30,   // Date & Time
+            30,   // Token
             50,   // Mobile
             50,   // Category
             50,   // Sub-Category
@@ -247,17 +270,50 @@ const fetchReports = async (from: string, to: string) => {
   try {
     setLoading(true);
 
-    const response = await API.getReportByDate({
+    const pageSize = 50;
+    let allData: BackendReport[] = [];
+
+    //  First call
+    const firstResponse = await API.getReportByDate({
       From: from,
       To: to,
-      // OrgId: orgId,
       PageNumber: 1,
-      PageSize: 10,
+      PageSize: pageSize,
     });
 
-    setReports(response.data ?? []);
+    const firstPageData: BackendReport[] = firstResponse.data ?? [];
+
+    if (firstPageData.length === 0) {
+      setReports([]);
+      return;
+    }
+
+    //  Read TotalRowCount from first row
+    const totalRows = firstPageData[0].TotalRowCount ?? firstPageData.length;
+
+    allData = [...firstPageData];
+
+    const totalPages = Math.ceil(totalRows / pageSize);
+
+    //  Remaining pages
+    for (let page = 2; page <= totalPages; page++) {
+      const response = await API.getReportByDate({
+        From: from,
+        To: to,
+        PageNumber: page,
+        PageSize: pageSize,
+      });
+
+      allData.push(...(response.data ?? []));
+    }
+
+    //  Optional cleanup: remove TotalRowCount from rows
+    const cleanedData = allData.map(({ TotalRowCount, ...rest }) => rest);
+
+    setReports(cleanedData as BackendReport[]);
+
   } catch (error) {
-    console.error("Failed to fetch date-wise report", error);
+    console.error("Failed to fetch all reports", error);
   } finally {
     setLoading(false);
   }
@@ -345,7 +401,7 @@ const exportToExcel = () => {
 
 
 const filteredReports = reports.filter((r) => {
-  const recordDate = r. DateAndTime.substring(0, 10);
+  const recordDate = r.DateAndTime.substring(0, 10);
 
   if (fromDate && recordDate < fromDate) return false;
   if (toDate && recordDate > toDate) return false;
@@ -358,19 +414,10 @@ const filteredReports = reports.filter((r) => {
   return true;
 });
 
+useEffect(() => {
+  setSubcategoryFilter("");
+}, [categoryFilter]);
 
-// const formatDateTime24 = (value: string) => {
-//   if (!value) return "-";
-//   const d = new Date(value);
-//   return d.toLocaleString("en-IN", {
-//     day: "2-digit",
-//     month: "2-digit",
-//     year: "numeric",
-//     hour: "2-digit",
-//     minute: "2-digit",
-//     hour12: false,
-//   });
-// };
 
 const formatTime24 = (value: string) => {
   if (!value) return "-";
@@ -403,10 +450,12 @@ const formatTime24 = (value: string) => {
       <label className="text-sm font-medium text-gray-700 mr-2">
         From:
       </label>
-      <input
+     
+        <input
         type="date"
         value={fromDate}
         onChange={(e) => setFromDate(e.target.value)}
+        max={today}   // restrict future dates
         className="border border-gray-300 rounded-md px-2 py-1 text-sm"
       />
     </div>
@@ -416,10 +465,13 @@ const formatTime24 = (value: string) => {
       <label className="text-sm font-medium text-gray-700 mr-2">
         To:
       </label>
-      <input
+     
+       <input
         type="date"
         value={toDate}
         onChange={(e) => setToDate(e.target.value)}
+        min={fromDate || undefined} // already existing
+        max={today}                  // restrict future dates
         className="border border-gray-300 rounded-md px-2 py-1 text-sm"
       />
     </div>
@@ -440,14 +492,7 @@ const formatTime24 = (value: string) => {
 
   {/* RIGHT SIDE — Buttons */}
   <div className="flex space-x-3">
-      {/* <select
-        value={reportType}
-        onChange={(e) => setReportType(e.target.value as "summary" | "detailed")}
-        className="border px-2 py-1 rounded text-sm"
-      >
-        <option value="summary">Summary Report</option>
-        <option value="detailed">Detailed Report</option>
-      </select> */}
+     
     <button
       onClick={handlePdfDownload}
       className="bg-blue-600 text-white px-3 py-1 rounded-md text-sm"
@@ -479,6 +524,7 @@ const formatTime24 = (value: string) => {
   Total Tokens: {filteredReports.length} &nbsp; | &nbsp;
   Completed: {filteredReports.filter(r => r.Status === "DONE").length} &nbsp; | &nbsp;
   Cancelled: {filteredReports.filter(r => r.Status === "CANCELLED").length}
+  Auto Closed: {filteredReports.filter(r => r.Status === "AUTOCLOSE").length}
 </div>
 
   <div className="relative flex-1 overflow-y-auto overflow-x-auto rounded-lg shadow-md">
@@ -499,7 +545,7 @@ const formatTime24 = (value: string) => {
           <HeaderFilter
             label="Cat"
             value={categoryFilter}
-            options={uniqueCategories}
+            options={categoryMap.map(([name]) => name)}
             onChange={setCategoryFilter}
           />
         </th>

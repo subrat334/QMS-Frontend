@@ -75,34 +75,65 @@ const UserwiseReport = () => {
   const [toDate,   setToDate] = useState("");
   const [appliedFromDate, setAppliedFromDate] = useState("");
   const [appliedToDate, setAppliedToDate] = useState("");
+  const today = new Date().toISOString().split("T")[0];
 
 
-  const fetchDetailedReport = async () => {
+const fetchDetailedReport = async () => {
+  let allRows: UserDetailRow[] = [];
+  let pageNumber = 1;
+  let totalRowCount = 0;
+  const pageSize = 20;
+
   try {
     setLoading(true);
     setError("");
 
+    do {
     const res = await API.getReportUserByDetail({
       UserId: filters.userId || "",
       UserName: filters.userName || "",
       Category: filters.category || "",
       SubCategory: filters.subcategory || "",
       Numbers: Number(filters.numbers) || 0,
+        StartDate: appliedFromDate || undefined,
+        EndDate: appliedToDate || undefined,
+        pageNumber,
+        pageSize,
+      });
 
-      // ✅ DATE FILTERS
-     StartDate: appliedFromDate || undefined,
-     EndDate: appliedToDate || undefined,
+      const pageData: UserDetailRow[] = Array.isArray(res.data)
+        ? res.data
+        : res.data?.Data ?? [];
 
-    });
+      //  READ TOTAL COUNT FROM FIRST ROW
+      if (totalRowCount === 0 && pageData.length > 0) {
+        totalRowCount =
+          (pageData as any)[0]?.TotalRowCount ?? pageData.length;
+      }
 
-    setDetailData(res.data ?? []);
-  } catch {
+      if (pageData.length === 0) break;
+
+      allRows.push(...pageData);
+      pageNumber++;
+
+      //  DO NOT BREAK ON ARRAY RESPONSE
+
+    } while (allRows.length < totalRowCount);
+
+    setDetailData(allRows);
+  } catch (error) {
     setError("Failed to fetch detailed report");
     setDetailData([]);
   } finally {
     setLoading(false);
   }
 };
+const handleGo = () => {
+  setAppliedFromDate(fromDate);
+  setAppliedToDate(toDate);
+};
+
+
 
 
 const groupedDetailData = detailData.reduce((acc, curr) => {
@@ -131,64 +162,95 @@ const detailedRows = Object.values(groupedDetailData);
   };
 
   const fetchReport = async () => {
+    let allRows: any[] = [];
+    let pageNumber = 1;
+    let totalRowCount = 0;
+    const pageSize = 20;
+
     try {
       setLoading(true);
       setError("");
 
+    do {
       const res = await API.getReportByUser({
         UserId: filters.userId || "",
         UserName: filters.userName || "",
         Category: filters.category || "",
         SubCategory: filters.subcategory || "",
         Numbers: Number(filters.numbers) || 0,
+        StartDate: appliedFromDate,
+        EndDate: appliedToDate,
+        pageNumber,
+        pageSize,
       });
 
-      // Normalize API response fields to match our UI
-      const rows: PatientRow[] = (res.data ?? []).map((r: any, idx: number) => ({
+      const pageData = Array.isArray(res.data)
+        ? res.data
+        : res.data?.Data ?? [];
+
+      //  READ TotalRowCount FROM FIRST ROW
+      if (totalRowCount === 0 && pageData.length > 0) {
+        totalRowCount =
+          pageData[0]?.TotalRowCount ?? pageData.length;
+      }
+
+      if (pageData.length === 0) break;
+
+      allRows.push(...pageData);
+      pageNumber++;
+
+      //  STOP ONLY WHEN ALL ROWS ARE FETCHED
+    } while (allRows.length < totalRowCount);
+
+    const mappedRows: PatientRow[] = allRows.map((r: any, idx: number) => ({
         id: idx + 1,
         userName: r.UserName,
         userId: r.UserId,
         category: r.Category,
         subcategory: r.SubCategory,
         numbers: r.Numbers,
-        details: r.details ?? [],
-      }));
+    }));
 
-      setData(rows);
-    } catch (e) {
-      setError("Failed to fetch user-wise report");
+      setData(mappedRows);
+    } catch (err) {
+      setError("Failed to fetch summary report");
       setData([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // useEffect(() => {
-  //   fetchReport();
-  // }, [filters]);
-
-//   useEffect(() => {
-//   if (reportType === "summary") {
-//     fetchReport();
-//   } else {
-//     fetchDetailedReport();
-//   }
-// }, [filters, reportType]);
-
-  // useEffect(() => {
-  //   if (reportType === "summary") {
-  //     fetchReport();
-  //   } else {
-  //     fetchDetailedReport();
-  //   }
-  // }, [filters, reportType, fromDate, toDate]);
-  useEffect(() => {
+useEffect(() => {
   if (reportType === "summary") {
     fetchReport();
-  } else {
+  }
+}, [reportType,appliedFromDate, appliedToDate]);
+
+useEffect(() => {
+  if (reportType === "detailed") {
     fetchDetailedReport();
   }
-}, [filters, reportType, appliedFromDate, appliedToDate]);
+}, [reportType, appliedFromDate, appliedToDate]);
+
+
+const filteredDetailedRows = detailedRows.filter((row: any) => {
+  const userNameMatch =
+    row.userName?.toLowerCase().includes(filters.userName.toLowerCase()) ?? false;
+
+  const userIdMatch =
+    row.userId?.toLowerCase().includes(filters.userId.toLowerCase()) ?? false;
+
+  const categoryMatch = filters.category
+    ? row.category === filters.category
+    : true;
+
+  const subcategoryMatch = filters.subcategory
+    ? row.subcategory === filters.subcategory
+    : true;
+
+  return userNameMatch && userIdMatch && categoryMatch && subcategoryMatch;
+});
+
 
 
 
@@ -292,6 +354,8 @@ const detailedRows = Object.values(groupedDetailData);
 
   const exportToExcel = () => {
     const exportData: any[] = [];
+
+  if (reportType === "summary") {
     filteredData.forEach((row, i) => {
       exportData.push({
         SrNo: i + 1,
@@ -301,19 +365,32 @@ const detailedRows = Object.values(groupedDetailData);
         Subcategory: row.subcategory,
         Numbers: row.numbers,
       });
-      if (reportType === "detailed" && row.details) {
-        row.details.forEach((d) => {
+    });
+  } else {
+    // detailed
+    filteredDetailedRows.forEach((row: any, i: number) => {
+      exportData.push({
+        SrNo: i + 1,
+        UserName: row.userName,
+        UserID: row.userId,
+        Category: row.category,
+        Subcategory: row.subcategory,
+        Numbers: row.details.length,
+      });
+
+      // add child rows
+        row.details.forEach((d: any) => {
           exportData.push({
             SrNo: "",
-            UserName: d.date,
-            UserID: d.service,
+            UserName: d.Date ? new Date(d.Date).toLocaleString() : "-",
+            UserID: `Sequence No: ${d.SequenceNo}`,
             Category: "",
             Subcategory: "",
             Numbers: "",
           });
         });
-      }
     });
+  }
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
@@ -367,6 +444,7 @@ const detailedRows = Object.values(groupedDetailData);
             type="date"
             value={fromDate}
             onChange={(e) => setFromDate(e.target.value)}
+            max={today}   // restrict future dates
             className="border border-gray-300 rounded-md px-2 py-1 text-sm"
           />
         </div>
@@ -380,15 +458,13 @@ const detailedRows = Object.values(groupedDetailData);
             type="date"
             value={toDate}
             onChange={(e) => setToDate(e.target.value)}
-            min={fromDate || undefined}
+            min={fromDate || undefined} // already existing
+            max={today}                  // restrict future dates
             className="border border-gray-300 rounded-md px-2 py-1 text-sm"
           />
         </div>
         <button
-          onClick={() => {
-            setAppliedFromDate(fromDate);
-            setAppliedToDate(toDate);
-          }}
+          onClick={handleGo}
           disabled={!fromDate || !toDate}
           className="bg-green-600 text-white px-4 py-1 rounded-md text-sm disabled:opacity-50"
         >
@@ -421,9 +497,15 @@ const detailedRows = Object.values(groupedDetailData);
           <span className="text-red-600">{error}</span>
         ) : (
           <>
-            Showing <span className="font-semibold">{filteredData.length}</span> of{" "}
-            <span className="font-semibold">{data.length}</span> records
-          </>
+    Showing{" "}
+    <span className="font-semibold">
+      {reportType === "summary"
+        ? filteredData.length
+        : filteredDetailedRows.length}
+    </span>
+    {" "}records
+  </>
+
         )}
       </div>
 
@@ -524,8 +606,9 @@ const detailedRows = Object.values(groupedDetailData);
         )}
 
         {/* DETAILED REPORT */}
-        {reportType === "detailed" && !loading && !error && detailedRows.length > 0 && (
-          detailedRows.map((row: any, i: number) => (
+      {reportType === "detailed" && !loading && !error && filteredDetailedRows.length > 0 && (
+  filteredDetailedRows.map((row: any, i: number) => (
+
             <React.Fragment key={i}>
               {/* Parent row */}
               <tr className="border-b text-center font-medium bg-white">
@@ -562,7 +645,8 @@ const detailedRows = Object.values(groupedDetailData);
         {!loading &&
           !error &&
           ((reportType === "summary" && filteredData.length === 0) ||
-            (reportType === "detailed" && detailedRows.length === 0)) && (
+            (reportType === "detailed" && filteredDetailedRows.length === 0)
+) && (
             <tr>
               <td colSpan={6} className="text-center py-4 text-gray-500 italic">
                 No records found for selected filters

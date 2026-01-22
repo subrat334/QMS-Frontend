@@ -225,6 +225,7 @@ updateTokenStatus: (data: {
   Remarks: string;
 }) => api.post("/Counter/AddTokenVisitDetails", data),
 
+
 getTokenPrefixSeries: (categoryId: number, subCategoryId: number) =>
   api.get(`/Account/GetTokenPrefixSeries?categoryId=${categoryId}&subCategoryId=${subCategoryId}`),
 // -------------------------------------------------------
@@ -248,6 +249,11 @@ updateUserActiveStatus: (userId: string, isActive: boolean) =>
   Category: string;
   SubCategory: string;
   Numbers?: number;
+  StartDate?: string;
+  EndDate?: string;
+  pageNumber?: number;
+  pageSize?: number;
+  
 }) =>
   api.get("/Report/getReportByUser", {
     params: {
@@ -263,6 +269,8 @@ updateUserActiveStatus: (userId: string, isActive: boolean) =>
   StartDate?: string;
   EndDate?: string;
   Numbers?: number;
+  pageNumber?: number;
+  pageSize?: number;
 }) =>
   api.get("/Report/getReportUserbyDetail", {
     params: {
@@ -286,7 +294,7 @@ updateUserActiveStatus: (userId: string, isActive: boolean) =>
   To: string;
   // OrgId: number;
   PageNumber?: number;
-  PageSize?: number;
+  PageSize?: 50;
 }) =>
   api.get("/Report/getReportByDate", { params }),
 
@@ -294,7 +302,7 @@ getReportByCategoryAndSubCategory: (params: {
   CategoryId?: number;
   SubCategoryId?: number;
   PageNumber?: number;
-  PageSize?: number;
+  PageSize?: 50;
 }) =>
   api.get("/Report/getReportbyCategoryAndSubCategory", {
     params: {
@@ -316,10 +324,16 @@ getReportbyCategoryAndSubCategoryDetail: (params: {
   api.get("/Report/getReportbyCategoryAndSubCategoryDetail", {
     params: {
       PageNumber: 1,
-      PageSize: 10,
+      PageSize: 50,
       ...params,
     },
   }),
+  
+  isUserExist: (username: string) =>
+  api.get(`/api/ajax/isuserexist`, {
+    params: { username },
+  }),
+
 
 }
 
