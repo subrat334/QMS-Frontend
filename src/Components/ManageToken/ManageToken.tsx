@@ -324,7 +324,7 @@ useEffect(() => {
   }
 
   console.log("[SIGNALR] Creating hub connection...");
- const CURRENT_SIGNALR_URL = SIGNALR_URLS.DEV;   // or SIGNALR_URLS.LIVE
+ const CURRENT_SIGNALR_URL = SIGNALR_URLS.LOCAL;   // or SIGNALR_URLS.LIVE
 
   const connection = ($ as any).hubConnection(
   CURRENT_SIGNALR_URL,
