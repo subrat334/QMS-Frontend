@@ -330,7 +330,7 @@ getReportbyCategoryAndSubCategoryDetail: (params: {
   }),
   
   isUserExist: (username: string) =>
-  api.get(`/api/ajax/isuserexist`, {
+  api.get(`/ajax/isuserexist`, {
     params: { username },
   }),
 

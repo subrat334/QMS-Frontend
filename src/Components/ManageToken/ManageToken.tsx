@@ -207,13 +207,10 @@ const ManageTokens = () => {
   // ------------------------------------------
   // FETCH TOKENS API
   // ------------------------------------------
-  const fetchTokens = async () => {
+ 
+
+   const fetchTokens = async () => {
     console.log("[API] fetchTokens called");
-    console.log("[API] Selected:", {
-      selectedCategory,
-      selectedSubcategory,
-      selectedCounter,
-    });
 
     if (!selectedCategory || !selectedSubcategory || !selectedCounter) {
       console.log("[API] Missing filter → Clearing tokens");
@@ -243,12 +240,20 @@ const ManageTokens = () => {
 
         let statusText = "Wait a while";
 
-        if (t.Status === TOKEN_STATUS.CALL) statusText = "CALLING";
-        else if (t.Status === TOKEN_STATUS.INPROGRESS) statusText = "WAIT A WHILE";
-        else if (t.Status === TOKEN_STATUS.HOLD) statusText = "HOLD";
-        else if (t.Status === TOKEN_STATUS.RECALL) statusText = "CALLING";
-        else if (t.Status === TOKEN_STATUS.CANCEL) statusText = "Cancelled";
-        else if (t.Status === TOKEN_STATUS.DONE) statusText = "DONE";
+        if (t.Status === TOKEN_STATUS.PENDING)
+          statusText = "Wait a while";
+        else if (t.Status === TOKEN_STATUS.CALL)
+          statusText = "CALLING";
+        else if (t.Status === TOKEN_STATUS.INPROGRESS)
+          statusText = "IN PROGRESS";   // ✅ FIX
+        else if (t.Status === TOKEN_STATUS.HOLD)
+          statusText = "HOLD";
+        else if (t.Status === TOKEN_STATUS.RECALL)
+          statusText = "CALLING";
+        else if (t.Status === TOKEN_STATUS.CANCEL)
+          statusText = "Cancelled";
+        else if (t.Status === TOKEN_STATUS.DONE)
+          statusText = "DONE";
 
         return {
           id: t.Id,
@@ -259,7 +264,7 @@ const ManageTokens = () => {
           subcategory: t.SubCategoryName,
           counterId: String(t.CounterId),
           status: normalizeStatus(statusText),
-          hold: t.StatusId === TOKEN_STATUS.HOLD,
+          hold: t.Status === TOKEN_STATUS.HOLD, // ✅ FIX
           mobile: t.MobileNumber,
           createdOn: t.CreatedOn,
         };
