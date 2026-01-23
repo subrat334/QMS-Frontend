@@ -63,12 +63,35 @@ const ManageTokens = () => {
 
   const counterRef = useRef(selectedCounter);
 
+//   const normalizeStatus = (status: string) => {
+//   switch (status.trim().toUpperCase()) {
+//     case "WAIT A WHILE":
+//       return "Wait a while";
+//     case "CALLING":
+//       return "CALLING";
+//     case "IN PROGRESS":
+//       return "IN PROGRESS";
+//     case "HOLD":
+//       return "HOLD";
+//     case "CANCELLED":
+//     case "CANCEL":
+//       return "Cancelled";
+//     case "DONE":
+//       return "DONE";
+//     default:
+//       return "Wait a while";
+//   }
+// };
+
   const normalizeStatus = (status: string) => {
   switch (status.trim().toUpperCase()) {
     case "WAIT A WHILE":
       return "Wait a while";
     case "CALLING":
       return "CALLING";
+    case "RE-CALL":
+    case "RECALL":
+      return "RE-CALL";           // ✅ NEW
     case "IN PROGRESS":
       return "IN PROGRESS";
     case "HOLD":
@@ -82,6 +105,7 @@ const ManageTokens = () => {
       return "Wait a while";
   }
 };
+
   
   const handleConfirmCancel = async () => {
     if (!selectedToken) return;
@@ -248,8 +272,11 @@ const ManageTokens = () => {
           statusText = "IN PROGRESS";   // ✅ FIX
         else if (t.Status === TOKEN_STATUS.HOLD)
           statusText = "HOLD";
+        // else if (t.Status === TOKEN_STATUS.RECALL)
+        //   statusText = "CALLING";
         else if (t.Status === TOKEN_STATUS.RECALL)
-          statusText = "CALLING";
+              statusText = "RE-CALL";
+
         else if (t.Status === TOKEN_STATUS.CANCEL)
           statusText = "Cancelled";
         else if (t.Status === TOKEN_STATUS.DONE)
@@ -365,7 +392,7 @@ setTokenData((prev) => {
       else if (tokenStatus.StatusId === TOKEN_STATUS.HOLD)
         newStatus = "HOLD";
       else if (tokenStatus.StatusId === TOKEN_STATUS.RECALL)
-        newStatus = "CALLING";
+        newStatus = "RE-CALL";
       else if (tokenStatus.StatusId === TOKEN_STATUS.CANCEL)
         newStatus = "Cancelled";
       else if (tokenStatus.StatusId === TOKEN_STATUS.DONE)
@@ -529,10 +556,18 @@ setTokenData((prev) => {
 
     await sendTokenStatusUpdate(token, "RECALL");
 
-    setTokenData((prev) =>
-      prev.map((t) =>t.id === id ? { ...t, status: "CALLING", hold: false } : t
-      )
-    );
+    // setTokenData((prev) =>
+    //   prev.map((t) =>t.id === id ? { ...t, status: "CALLING", hold: false } : t
+    //   )
+    // );
+    setTokenData(prev =>
+  prev.map(t =>
+    t.id === id
+      ? { ...t, status: "RE-CALL", hold: false }
+      : t
+  )
+);
+
 };
 ;
 
@@ -770,6 +805,40 @@ setTokenData((prev) => {
                                 </button>
                               </div>
                             )}
+
+                            {/* RE-CALL */}
+{token.status === "RE-CALL" && (
+  <div className="flex gap-2">
+    <button
+      className="bg-blue-700 text-white px-3 py-1 rounded"
+      onClick={() => handleStart(token.id)}
+    >
+      Start
+    </button>
+
+    <button
+      className="bg-yellow-500 text-white px-3 py-1 rounded"
+      onClick={() => handleHold(token.id)}
+    >
+      Hold
+    </button>
+
+    <button
+      className="bg-red-600 text-white px-3 py-1 rounded"
+      onClick={() => handleCancelClick(token)}
+    >
+      Cancel
+    </button>
+
+    <button
+      className="bg-green-600 text-white px-3 py-1 rounded"
+      onClick={() => handleProcessDone(token.id)}
+    >
+      Done
+    </button>
+  </div>
+)}
+
 
                             {/* IN PROGRESS */}
                           {token.status === "IN PROGRESS" && (
