@@ -662,9 +662,22 @@ const buildPrivilegesPayload = (userId: string) => {
       for (const subId of subIds) {
         try {
           const resC = await API.getCountersBySubCategoryId(subId);
+    
+    // Normalize the counters to match CounterSimple structure
+        const sub = subcategories.find(s => s.SubCategoryId === subId);
+        const normalized = (resC.data || []).map((c: any) => ({
+          Id: Number(c.CounterId),
+          CounterId: Number(c.CounterId),
+          Name: c.CounterName,
+          CategoryId: sub?.CategoryId ?? 0,
+          CategoryName: sub?.Categoryname ?? "",
+          SubCategoryId: subId,
+          SubCategoryName: sub?.SubCategoryname ?? "",
+        }));
+    
           setSubcatCounters((prev) => ({
             ...prev,
-            [subId]: resC.data || [],
+            [subId]: normalized,
           }));
         } catch (err) {
           console.warn("Counter fetch failed:", subId);

@@ -82,7 +82,7 @@ const fetchDetailedReport = async () => {
   let allRows: UserDetailRow[] = [];
   let pageNumber = 1;
   let totalRowCount = 0;
-  const pageSize = 20;
+  const pageSize = 50;
 
   try {
     setLoading(true);
@@ -157,9 +157,18 @@ const detailedRows = Object.values(groupedDetailData);
 
 
 
+  // const handleFilterChange = (field: string, value: string) => {
+  //   setFilters((prev) => ({ ...prev, [field]: value }));
+  // };
+
   const handleFilterChange = (field: string, value: string) => {
-    setFilters((prev) => ({ ...prev, [field]: value }));
-  };
+  setFilters((prev) => ({
+    ...prev,
+    [field]: value,
+    ...(field === "category" ? { subcategory: "" } : {}),
+  }));
+};
+
 
   const fetchReport = async () => {
     let allRows: any[] = [];
@@ -399,7 +408,16 @@ const filteredDetailedRows = detailedRows.filter((row: any) => {
   };
 
   const categories = Array.from(new Set(data.map((d) => d.category)));
-  const subcategories = Array.from(new Set(data.map((d) => d.subcategory)));
+const subcategories = Array.from(
+  new Set(
+    data
+      .filter((d) =>
+        filters.category ? d.category === filters.category : true
+      )
+      .map((d) => d.subcategory)
+  )
+);
+
 
   const filteredData = data.filter((row) => {
     const userNameMatch = row.userName?.toLowerCase().includes(filters.userName.toLowerCase()) ?? false;

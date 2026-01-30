@@ -29,7 +29,7 @@ interface BackendReport {
   TAT1: string;
   TAT2: string;
   TAT3: string;
-  Status: "DONE" | "CANCELLED" | "AUTOCLOSE";
+ Status: "DONE" | "CANCELLED" | "AUTOCLOSED" | "CANCEL"; 
   UserTypeName: string;
   UserTypeId: string;
   UserId: string;
@@ -79,12 +79,16 @@ const DatewiseReport = () => {
     fetchReports(today, today);
   }, []);
 
-  useEffect(() => {
-    // date change
-    if (fromDate && toDate) {
-      fetchReports(fromDate, toDate);
-    }
-  }, [fromDate, toDate]);
+ 
+  const handleGoClick = () => {
+  if (!fromDate || !toDate) {
+    alert("Please select both From and To dates");
+    return;
+  }
+
+  fetchReports(fromDate, toDate);
+};
+
 
   const categoryMap = Array.from(
   new Map(
@@ -158,10 +162,18 @@ const handlePdfDownload = async () => {
       calculateTAT(r.DateAndTime, r.CallTime),
       calculateTAT(r.DateAndTime, r.ReceiveTime),
       calculateTAT(r.ReceiveTime, r.CompleteTime),
-       {
-      text: r.Remarks?.trim() ? r.Remarks : "-",
-      noWrap: false,
-    },
+     {
+  text:
+    r.Remarks?.trim()
+      ? r.Remarks
+      : r.Status === "DONE"
+      ? "Service Done"
+      : r.Status === "AUTOCLOSED"
+      ? "Token Auto Closed"
+      : "Not Served",
+  noWrap: false,
+},
+
       {
         text: r.Status,
         bold: true,
@@ -222,7 +234,7 @@ const handlePdfDownload = async () => {
           dontBreakRows: true,
           widths: [
             15,   // Sr.No
-            30,   // Date & Time
+            32,   // Date & Time
             30,   // Token
             50,   // Mobile
             50,   // Category
@@ -308,7 +320,10 @@ const fetchReports = async (from: string, to: string) => {
     }
 
     //  Optional cleanup: remove TotalRowCount from rows
-    const cleanedData = allData.map(({ TotalRowCount, ...rest }) => rest);
+   const cleanedData = allData.map(({ TotalRowCount, Status, ...rest }) => ({
+      ...rest,
+      Status: Status === "CANCEL" ? "CANCELLED" : Status,
+    }));
 
     setReports(cleanedData as BackendReport[]);
 
@@ -363,7 +378,7 @@ const fetchReports = async (from: string, to: string) => {
   };
 
   // Function to calculate TAT
- const calculateTAT = (start: string, end: string): string => {
+const calculateTAT = (start: string, end: string): string => {
   if (!start || !end) return "N/A";
 
   const startDate = new Date(start);
@@ -374,17 +389,18 @@ const fetchReports = async (from: string, to: string) => {
   }
 
   const diffMs = endDate.getTime() - startDate.getTime();
-  if (diffMs < 0) return "Invalid";
+  const sign = diffMs < 0 ? "-" : "";
 
-  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffMinutes = Math.floor(Math.abs(diffMs) / (1000 * 60));
 
-  if (diffMinutes < 60) return `${diffMinutes} min`;
+  if (diffMinutes < 60) return `${sign}${diffMinutes} min`;
 
   const hours = Math.floor(diffMinutes / 60);
   const minutes = diffMinutes % 60;
 
-  return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+  return minutes > 0 ? `${sign}${hours}h ${minutes}m` : `${sign}${hours}h`;
 };
+
 
 
   // 🔹 Filter reports by selected date
@@ -393,11 +409,44 @@ const fetchReports = async (from: string, to: string) => {
 //   window.print();
 // };
 const exportToExcel = () => {
-  const worksheet = XLSX.utils.json_to_sheet(filteredReports);
+  const excelData = filteredReports.map((r, index) => ({
+    "Sr No": index + 1,
+    "Date & Time (T1)": r.DateAndTime,
+    "Token": r.Token,
+    "Mobile No": r.MobileNumber,
+    "Category": r.Category,
+    "Sub Category": r.SubCategory,
+    "User": r.UserName,
+    // "Call Time (T2)": r.CallTime,
+    // "Receive Time (T3)": r.ReceiveTime,
+    // "Complete Time (T4)": r.CompleteTime,
+     "Call Time (T2)":formatTime24(r.CallTime),
+      "Receive Time (T3)":formatTime24(r.ReceiveTime),
+      "Complete Time (T4)":formatTime24(r.CompleteTime),
+
+    "TAT1": calculateTAT(r.DateAndTime, r.CallTime),
+    "TAT2": calculateTAT(r.DateAndTime, r.ReceiveTime),
+    "TAT3": calculateTAT(r.ReceiveTime, r.CompleteTime),
+      "Remarks": r.Remarks?.trim()
+      ? r.Remarks
+      : r.Status === "DONE"
+      ? "Service Done"
+      : r.Status === "AUTOCLOSED"
+      ? "Token Auto Closed"
+      : "Not Served",
+
+    "Status": r.Status,
+  
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(excelData);
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Reports");
-  XLSX.writeFile(workbook, "Reports.xlsx");
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Datewise Report");
+
+  XLSX.writeFile(workbook, "Datewise_Report.xlsx");
 };
+
+
 
 
 const filteredReports = reports.filter((r) => {
@@ -429,6 +478,57 @@ const formatTime24 = (value: string) => {
     hour12: false,
   });
 };
+
+const formatDateTime = (value: string) => {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return "Invalid";
+
+  // Format as "dd-mm-yyyy hh:mm"
+  const day = d.getDate().toString().padStart(2, "0");
+  const month = (d.getMonth() + 1).toString().padStart(2, "0");
+  const year = d.getFullYear();
+
+  const hours = d.getHours().toString().padStart(2, "0");
+  const minutes = d.getMinutes().toString().padStart(2, "0");
+
+  return `${day}-${month}-${year} ${hours}:${minutes}`;
+};
+
+const formatDate = (value: string) => {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return "Invalid";
+
+  const day = d.getDate().toString().padStart(2, "0");
+  const month = (d.getMonth() + 1).toString().padStart(2, "0");
+  const year = d.getFullYear();
+
+  return `${day}-${month}-${year}`;
+};
+
+
+const selectedDateText = (() => {
+  if (!fromDate && !toDate) {
+    return `Showing data for: ${formatDate(today)}`;
+  }
+
+  if (fromDate && toDate && fromDate === toDate) {
+    return `Showing data for: ${formatDate(fromDate)}`;
+  }
+
+  if (fromDate && toDate) {
+    return `Showing data from: ${formatDate(fromDate)} to ${formatDate(toDate)}`;
+  }
+
+  if (fromDate) {
+    return `Showing data from: ${formatDate(fromDate)}`;
+  }
+
+  return "";
+})();
+
+
 
 
 
@@ -475,6 +575,19 @@ const formatTime24 = (value: string) => {
         className="border border-gray-300 rounded-md px-2 py-1 text-sm"
       />
     </div>
+    
+    <button
+  onClick={handleGoClick}
+  disabled={!fromDate || !toDate}
+  className={`px-4 py-1 rounded-md text-sm font-medium text-white
+    ${fromDate && toDate
+      ? "bg-green-600 hover:bg-green-700"
+      : "bg-gray-400 cursor-not-allowed"
+    }`}
+>
+  Go
+</button>
+
 
     {/* Clear Button */}
       <button
@@ -516,16 +629,22 @@ const formatTime24 = (value: string) => {
     </button> */}
   </div>
   
+  
 
 </div>
+<div className="mb-2 text-sm font-medium text-gray-600">
+  {selectedDateText}
+</div>
+
 
 {/* SUMMARY BAR */}
 <div className=" text-sm font-semibold text-gray-700">
   Total Tokens: {filteredReports.length} &nbsp; | &nbsp;
   Completed: {filteredReports.filter(r => r.Status === "DONE").length} &nbsp; | &nbsp;
-  Cancelled: {filteredReports.filter(r => r.Status === "CANCELLED").length}
-  Auto Closed: {filteredReports.filter(r => r.Status === "AUTOCLOSE").length}
+  Cancelled: {filteredReports.filter(r => r.Status === "CANCELLED").length} &nbsp; | &nbsp;
+  Auto Closed: {filteredReports.filter(r => r.Status === "AUTOCLOSED").length}
 </div>
+
 
   <div className="relative flex-1 overflow-y-auto overflow-x-auto rounded-lg shadow-md">
 
@@ -612,7 +731,7 @@ const formatTime24 = (value: string) => {
         <td className="px-3 py-2">{i + 1}</td>
 
         <td className="px-3 py-2">
-          {formatTime24(r.DateAndTime)}
+          {formatDateTime(r.DateAndTime)}
         </td>
 
         <td className="px-3 py-2 font-medium text-gray-800">
@@ -638,9 +757,16 @@ const formatTime24 = (value: string) => {
           {calculateTAT(r.ReceiveTime, r.CompleteTime)}
         </td>
 
-        <td className="px-3 py-2">
-          {r.Status === "DONE" ? "Service Done" : "Not Served"}
-        </td>
+      <td className="px-3 py-2 text-left">
+  {r.Remarks?.trim()
+    ? r.Remarks
+    : r.Status === "DONE"
+    ? "Service Done"
+    : r.Status === "AUTOCLOSED"
+    ? "Token Auto Closed"
+    : "Not Served"}
+</td>
+
 
         <td
           className={`px-3 py-2 rounded-md text-sm font-medium ${
