@@ -258,8 +258,17 @@ updateUserActiveStatus: (userId: string, isActive: boolean) =>
 }) =>
   api.get("/Report/getReportByUser", {
     params: {
-      ...params,
+      UserId: params.UserId,
+      UserName: params.UserName,
+      Category: params.Category,
+      SubCategory: params.SubCategory,
       Numbers: params.Numbers ?? 0,
+
+      //  map names correctly
+      From: params.StartDate,
+      To: params.EndDate,
+      PageNumber: params.pageNumber,
+      PageSize: params.pageSize,
     },
   }),
   getReportUserByDetail: (params: {
