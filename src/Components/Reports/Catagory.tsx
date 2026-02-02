@@ -613,7 +613,7 @@ const formatDate = (dateStr: string) => {
           Previous
         </button> */}
 
-        <span className="text-sm">Page {pageNumber}</span>
+        {/* <span className="text-sm">Page {pageNumber}</span> */}
 
         {/* <button
           disabled={pageNumber * pageSize >= totalRecords}

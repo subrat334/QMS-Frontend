@@ -71,11 +71,12 @@ const UserwiseReport = () => {
   const [reportType, setReportType] = useState<"summary" | "detailed">("summary");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate,   setToDate] = useState("");
-  const [appliedFromDate, setAppliedFromDate] = useState("");
-  const [appliedToDate, setAppliedToDate] = useState("");
   const today = new Date().toISOString().split("T")[0];
+
+  const [fromDate, setFromDate] = useState(today);
+  const [toDate, setToDate] = useState(today);
+  const [appliedFromDate, setAppliedFromDate] = useState(today);
+  const [appliedToDate, setAppliedToDate] = useState(today);
 
 
 const fetchDetailedReport = async () => {
@@ -493,10 +494,10 @@ const subcategories = Array.from(
         {/* Clear Button */}
        <button
   onClick={() => {
-    setFromDate("");
-    setToDate("");
-    setAppliedFromDate("");
-    setAppliedToDate("");
+    setFromDate("today");
+    setToDate("today");
+    setAppliedFromDate("today");
+    setAppliedToDate("today");
   }}
   className="text-sm text-blue-600 underline"
 >

@@ -32,6 +32,7 @@ type TokenItem = {
   };
 
   type SelectedToken = {
+     TokenQueueId: number;
     Token: string;
     CategoryId: number;
     SubCategoryId: number;
@@ -118,6 +119,7 @@ const ManageTokens = () => {
     try {
       // Call API to update status
       await API.updateTokenStatus({
+        TokenQueueId: selectedToken.TokenQueueId, // ✅ NEW 
         CategoryId: selectedToken.CategoryId,
         SubCategoryId: selectedToken.SubCategoryId,
         // CounterId: selectedToken.CounterId,
@@ -460,6 +462,7 @@ setTokenData((prev) => {
     console.log("[SEND STATUS] Called:", { token, action });
 
     const payload = {
+      TokenQueueId: token.id,
       CategoryId: Number(token.categoryId),
       SubCategoryId: Number(token.subcategoryId),
       CounterId: Number(selectedCounter),
@@ -573,6 +576,7 @@ setTokenData((prev) => {
 
   const handleCancelClick = (token: TokenItem) => {
     setSelectedToken({
+      TokenQueueId: token.id,
       Token: token.number,
       CategoryId: Number(token.categoryId),
       SubCategoryId: Number(token.subcategoryId),
