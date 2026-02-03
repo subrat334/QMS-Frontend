@@ -389,16 +389,18 @@ const calculateTAT = (start: string, end: string): string => {
   }
 
   const diffMs = endDate.getTime() - startDate.getTime();
-  const sign = diffMs < 0 ? "-" : "";
 
-  const diffMinutes = Math.floor(Math.abs(diffMs) / (1000 * 60));
+  //  Prevent negative & -0 results
+  if (diffMs <= 0) return "0 min";
 
-  if (diffMinutes < 60) return `${sign}${diffMinutes} min`;
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+  if (diffMinutes < 60) return `${diffMinutes} min`;
 
   const hours = Math.floor(diffMinutes / 60);
   const minutes = diffMinutes % 60;
 
-  return minutes > 0 ? `${sign}${hours}h ${minutes}m` : `${sign}${hours}h`;
+  return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
 };
 
 

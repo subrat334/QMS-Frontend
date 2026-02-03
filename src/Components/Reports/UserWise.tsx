@@ -261,6 +261,39 @@ const filteredDetailedRows = detailedRows.filter((row: any) => {
   return userNameMatch && userIdMatch && categoryMatch && subcategoryMatch;
 });
 
+const formatDate = (value: string) => {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return "Invalid";
+
+  const day = d.getDate().toString().padStart(2, "0");
+  const month = (d.getMonth() + 1).toString().padStart(2, "0");
+  const year = d.getFullYear();
+
+  return `${day}-${month}-${year}`;
+};
+
+
+
+const selectedDateText = (() => {
+  if (!fromDate && !toDate) {
+    return `Showing data for: ${formatDate(today)}`;
+  }
+
+  if (fromDate && toDate && fromDate === toDate) {
+    return `Showing data for: ${formatDate(fromDate)}`;
+  }
+
+  if (fromDate && toDate) {
+    return `Showing data from: ${formatDate(fromDate)} to ${formatDate(toDate)}`;
+  }
+
+  if (fromDate) {
+    return `Showing data from: ${formatDate(fromDate)}`;
+  }
+
+  return "";
+})();
 
 
 
@@ -506,6 +539,9 @@ const subcategories = Array.from(
 
 
       </div>
+      <div className="mb-2 text-sm font-medium text-gray-600">
+  {selectedDateText}
+  </div>
 
 
       {/* Summary Info */}
