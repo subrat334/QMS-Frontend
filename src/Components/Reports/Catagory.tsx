@@ -47,6 +47,46 @@ const CatagorywiseReport = () => {
     useState<"summary" | "detailed">("summary");
 
   const [pageNumber, setPageNumber] = useState(1);
+  const [allCategories, setAllCategories] = useState<[number, string][]>([]);
+  const [allSubcategories, setAllSubcategories] = useState<
+    { subCategoryId: number; subCategory: string; categoryId: number }[]
+  >([]);
+
+  useEffect(() => {
+    loadMasters();
+  }, []);
+
+
+  const loadMasters = async () => {
+    try {
+      const res = await API.getReportByCategoryAndSubCategory({
+        PageNumber: 1,
+        PageSize: 1000,
+      });
+
+      const apiData = Array.isArray(res.data) ? res.data : [];
+
+      const catMap = new Map<number, string>();
+      const subMap = new Map<number, any>();
+
+      apiData.forEach((d: any) => {
+        catMap.set(d.CategoryId, d.Category);
+
+        subMap.set(d.SubCategoryId, {
+          subCategoryId: d.SubCategoryId,
+          subCategory: d.SubCategory,
+          categoryId: d.CategoryId,
+        });
+      });
+
+      setAllCategories(Array.from(catMap.entries()));
+      setAllSubcategories(Array.from(subMap.values()));
+    } catch (e) {
+      console.error("Failed loading masters", e);
+    }
+  };
+
+
 
   useEffect(() => {
   setPageNumber(1); // reset page when mode/filter changes
@@ -367,17 +407,19 @@ const formatDate = (dateStr: string) => {
 
   /* ---------- DROPDOWNS (derived) ---------- */
 
-  const categories = Array.from(
-    new Map(
-      data.map((d: any) => [d.categoryId, d.category])
-    ).entries()
-  );
+  const subcategories = useMemo(() => {
+    if (!categoryFilter) return allSubcategories;
 
-  const subcategories = Array.from(
-    new Map(
-      data.map((d: any) => [d.subCategoryId, d.subcategory])
-    ).entries()
-  );
+    return allSubcategories.filter(
+      s => s.categoryId === categoryFilter
+    );
+  }, [categoryFilter, allSubcategories]);
+
+  useEffect(() => {
+    setSubcategoryFilter("");
+  }, [categoryFilter]);
+
+
 
   /* ---------- FILTERED DATA ---------- */
 
@@ -427,10 +469,44 @@ const formatDate = (dateStr: string) => {
   // const handlePrint = () => window.print();
 
   const exportToExcel = () => {
-    const exportData =
-      reportType === "summary" ? summaryData : filteredData;
+    let exportData: any[];
 
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    if (reportType === "summary") {
+      exportData = summaryData.map((row, index) => ({
+        "Sl.No": index + 1,
+        Category: row.category,
+        Tokens: row.tokens,
+        Completed: row.completed,
+        Cancelled: row.cancelled,
+        AutoClosed: row.autoClosed,
+      }));
+    } else {
+      exportData = filteredData.map((row, index) => ({
+        "Sl.No": index + 1,
+        Date: row.date ? new Date(row.date) : "",
+        Category: row.category,
+        Subcategory: row.subcategory,
+        Tokens: row.tokens,
+        Completed: row.completed,
+        Cancelled: row.cancelled,
+        AutoClosed: row.autoClosed,
+      }));
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData, {
+      cellDates: true,
+    });
+
+    // Apply date+time format (Date column = index 1)
+    const range = XLSX.utils.decode_range(worksheet["!ref"] || "");
+    for (let R = 1; R <= range.e.r; R++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: R, c: 1 });
+      const cell = worksheet[cellAddress];
+      if (cell && cell.t === "d") {
+        cell.z = "dd-mm-yyyy hh:mm AM/PM";
+      }
+    }
+
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Report");
     XLSX.writeFile(workbook, "Category_Report.xlsx");
@@ -457,7 +533,8 @@ const formatDate = (dateStr: string) => {
       className="border px-3 py-1 rounded-md text-sm"
       >
         <option value="">All Categories</option>
-        {categories.map(([id, name]) => (
+        {allCategories.map(([id, name]) => (
+
           <option key={id} value={id}>
           {name}
         </option>
@@ -474,9 +551,9 @@ const formatDate = (dateStr: string) => {
       className="border px-3 py-1 rounded-md text-sm"
       >
         <option value="">All Subcategories</option>
-        {subcategories.map(([id, name]) => (
-          <option key={id} value={id}>
-            {name}
+        {subcategories.map(s => (
+          <option key={s.subCategoryId} value={s.subCategoryId}>
+            {s.subCategory}
           </option>
         ))}
       </select>

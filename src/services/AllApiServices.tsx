@@ -312,15 +312,16 @@ getReportByCategoryAndSubCategory: (params: {
   CategoryId?: number;
   SubCategoryId?: number;
   PageNumber?: number;
-  PageSize?: 50;
+  PageSize?: number;
 }) =>
   api.get("/Report/getReportbyCategoryAndSubCategory", {
     params: {
-      PageNumber: 1,
-      // PageSize: 10,
+      PageNumber: params?.PageNumber ?? 1,
+      PageSize: params?.PageSize ?? 50,
       ...params,
     },
   }),
+
 
   // -------------------------------------------------------
 // CATEGORY & SUBCATEGORY REPORT (DETAILED)
@@ -343,6 +344,19 @@ getReportbyCategoryAndSubCategoryDetail: (params: {
   api.get(`/ajax/isuserexist`, {
     params: { username },
   }),
+
+  isTokenPrefixSeriesExist: (data: {
+  id: number;
+  categoryId: number;
+  subCategoryId: number;
+  prefix: string;
+  initializeNo: string;
+  resetTypeId: number;
+}) =>
+  api.get("/Account/IsTokenPrefixSeriesExist", {
+    params: data,
+  }),
+
 
 
 }

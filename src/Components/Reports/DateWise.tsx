@@ -169,7 +169,7 @@ const handlePdfDownload = async () => {
       : r.Status === "DONE"
       ? "Service Done"
       : r.Status === "AUTOCLOSED"
-      ? "Token Auto Closed"
+      ? "Token is Auto Closed"
       : "Not Served",
   noWrap: false,
 },
@@ -413,7 +413,7 @@ const calculateTAT = (start: string, end: string): string => {
 const exportToExcel = () => {
   const excelData = filteredReports.map((r, index) => ({
     "Sr No": index + 1,
-    "Date & Time (T1)": r.DateAndTime,
+    "Date & Time (T1)":  formatDateTime(r.DateAndTime),
     "Token": r.Token,
     "Mobile No": r.MobileNumber,
     "Category": r.Category,
@@ -434,7 +434,7 @@ const exportToExcel = () => {
       : r.Status === "DONE"
       ? "Service Done"
       : r.Status === "AUTOCLOSED"
-      ? "Token Auto Closed"
+      ? "Token  is Auto Closed"
       : "Not Served",
 
     "Status": r.Status,
@@ -765,7 +765,7 @@ const selectedDateText = (() => {
     : r.Status === "DONE"
     ? "Service Done"
     : r.Status === "AUTOCLOSED"
-    ? "Token Auto Closed"
+    ? "Token  is Auto Closed"
     : "Not Served"}
 </td>
 

@@ -60,9 +60,13 @@ api.interceptors.response.use(
 //   window.location.href = "/";
 // }
 
-export function logoutUser() {
-  console.log("LOGOUT FIRED"); // debug
-  toast.error("Session expired. Please login again.");
+
+export function logoutUser(reason: "expired" | "manual" = "expired") {
+  console.log("LOGOUT FIRED:", reason);
+
+  if (reason === "expired") {
+    toast.error("Session expired. Please login again.");
+  }
 
   localStorage.removeItem("AccessToken");
   localStorage.removeItem("RefreshToken");
@@ -71,6 +75,18 @@ export function logoutUser() {
 
   window.location.href = "/";
 }
+
+// export function logoutUser() {
+//   console.log("LOGOUT FIRED"); // debug
+//   toast.error("Session expired. Please login again.");
+
+//   localStorage.removeItem("AccessToken");
+//   localStorage.removeItem("RefreshToken");
+//   localStorage.removeItem("AppUser");
+//   localStorage.removeItem("UserPrivileges");
+
+//   window.location.href = "/";
+// }
 
 
 export default api;

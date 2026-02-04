@@ -175,7 +175,7 @@ const detailedRows = Object.values(groupedDetailData);
     let allRows: any[] = [];
     let pageNumber = 1;
     let totalRowCount = 0;
-    const pageSize = 20;
+    const pageSize = 50;
 
     try {
       setLoading(true);
