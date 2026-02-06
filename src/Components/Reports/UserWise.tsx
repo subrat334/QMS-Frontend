@@ -17,15 +17,27 @@ interface Detail {
   service: string;
 }
 
+// // interface PatientRow {
+// //   id: number;
+// //   userName: string;
+// //   userId: string;
+// //   category: string;
+// //   subcategory: string;
+// //   numbers: number;
+// //   details?: Detail[];
+// // }
 interface PatientRow {
   id: number;
   userName: string;
   userId: string;
   category: string;
   subcategory: string;
-  numbers: number;
+  numbers: number;   // total
+  done: number;
+  cancel: number;
   details?: Detail[];
 }
+
 
 interface UserDetailRow {
   UserId: string;
@@ -34,6 +46,7 @@ interface UserDetailRow {
   SubCategory: string;
   Date: string | null;
   SequenceNo: number;
+  Token?: string;
 }
 
 
@@ -77,6 +90,8 @@ const UserwiseReport = () => {
   const [toDate, setToDate] = useState(today);
   const [appliedFromDate, setAppliedFromDate] = useState(today);
   const [appliedToDate, setAppliedToDate] = useState(today);
+  const [numberStatus, setNumberStatus] = useState<"ALL" | "DONE" | "CANCEL">("ALL");
+
 
 
 const fetchDetailedReport = async () => {
@@ -212,14 +227,25 @@ const detailedRows = Object.values(groupedDetailData);
       //  STOP ONLY WHEN ALL ROWS ARE FETCHED
     } while (allRows.length < totalRowCount);
 
+    // const mappedRows: PatientRow[] = allRows.map((r: any, idx: number) => ({
+    //     id: idx + 1,
+    //     userName: r.UserName,
+    //     userId: r.UserId,
+    //     category: r.Category,
+    //     subcategory: r.SubCategory,
+    //     numbers: r.Numbers,
+    // }));
     const mappedRows: PatientRow[] = allRows.map((r: any, idx: number) => ({
-        id: idx + 1,
-        userName: r.UserName,
-        userId: r.UserId,
-        category: r.Category,
-        subcategory: r.SubCategory,
-        numbers: r.Numbers,
-    }));
+  id: idx + 1,
+  userName: r.UserName,
+  userId: r.UserId,
+  category: r.Category,
+  subcategory: r.SubCategory,
+  numbers: r.Numbers,
+  done: r.DONE,
+  cancel: r.CANCEL,
+}));
+
 
       setData(mappedRows);
     } catch (err) {
@@ -294,6 +320,18 @@ const selectedDateText = (() => {
 
   return "";
 })();
+
+const getDisplayNumber = (row: PatientRow) => {
+  switch (numberStatus) {
+    case "DONE":
+      return row.done;
+    case "CANCEL":
+      return row.cancel;
+    default:
+      return row.numbers;
+  }
+};
+
 
 
 
@@ -451,16 +489,51 @@ const subcategories = Array.from(
       .map((d) => d.subcategory)
   )
 );
+const shouldShowRow = (row: PatientRow) => {
+  switch (numberStatus) {
+    case "DONE":
+      return row.done > 0;
+    case "CANCEL":
+      return row.cancel > 0;
+    default:
+      return row.numbers > 0;
+  }
+};
+const filteredData = data.filter((row) => {
+  const userNameMatch =
+    row.userName?.toLowerCase().includes(filters.userName.toLowerCase()) ?? false;
+
+  const userIdMatch =
+    row.userId?.toLowerCase().includes(filters.userId.toLowerCase()) ?? false;
+
+  const categoryMatch = filters.category
+    ? row.category === filters.category
+    : true;
+
+  const subcategoryMatch = filters.subcategory
+    ? row.subcategory === filters.subcategory
+    : true;
+
+  const numberVisibility = shouldShowRow(row);
+
+  return (
+    userNameMatch &&
+    userIdMatch &&
+    categoryMatch &&
+    subcategoryMatch &&
+    numberVisibility
+  );
+});
 
 
-  const filteredData = data.filter((row) => {
-    const userNameMatch = row.userName?.toLowerCase().includes(filters.userName.toLowerCase()) ?? false;
-    const userIdMatch = row.userId?.toLowerCase().includes(filters.userId.toLowerCase()) ?? false;
-    const categoryMatch = filters.category ? row.category === filters.category : true;
-    const subcategoryMatch = filters.subcategory ? row.subcategory === filters.subcategory : true;
-    const numbersMatch = filters.numbers ? row.numbers.toString().includes(filters.numbers) : true;
-    return userNameMatch && userIdMatch && categoryMatch && subcategoryMatch && numbersMatch;
-  });
+  // const filteredData = data.filter((row) => {
+  //   const userNameMatch = row.userName?.toLowerCase().includes(filters.userName.toLowerCase()) ?? false;
+  //   const userIdMatch = row.userId?.toLowerCase().includes(filters.userId.toLowerCase()) ?? false;
+  //   const categoryMatch = filters.category ? row.category === filters.category : true;
+  //   const subcategoryMatch = filters.subcategory ? row.subcategory === filters.subcategory : true;
+  //   const numbersMatch = filters.numbers ? row.numbers.toString().includes(filters.numbers) : true;
+  //   return userNameMatch && userIdMatch && categoryMatch && subcategoryMatch && numbersMatch;
+  // });
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -631,15 +704,22 @@ const subcategories = Array.from(
                   ))}
                 </select>
               </td>
-              <td className="px-2 py-1">
-                {/* <input
-                  type="text"
-                  value={filters.numbers}
-                  onChange={(e) => handleFilterChange("numbers", e.target.value)}
-                  placeholder="Search no."
-                  className="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
-                /> */}
-              </td>
+            <td className="px-2 py-1">
+            {reportType === "summary" && (
+              <select
+                value={numberStatus}
+                onChange={(e) =>
+                  setNumberStatus(e.target.value as "ALL" | "DONE" | "CANCEL")
+                }
+                className="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+              >
+                <option value="ALL">All</option>
+                <option value="DONE">Done</option>
+                <option value="CANCEL">Cancelled</option>
+              </select>
+            )}
+          </td>
+
             </tr>
           </thead>
 
@@ -653,9 +733,10 @@ const subcategories = Array.from(
               <td className="px-3 py-2">{row.userId}</td>
               <td className="px-3 py-2">{row.category}</td>
               <td className="px-3 py-2">{row.subcategory}</td>
-              <td className="px-3 py-2 font-semibold text-green-700">
-                {row.numbers}
-              </td>
+             <td className="px-3 py-2 font-semibold text-green-700">
+  {getDisplayNumber(row)}
+</td>
+
             </tr>
           ))
         )}
@@ -687,9 +768,13 @@ const subcategories = Array.from(
                   <td colSpan={2} className="px-3 py-2">
                     {d.Date ? new Date(d.Date).toLocaleString() : "-"}
                   </td>
-                  <td colSpan={3} className="px-3 py-2">
+                  {/* <td colSpan={3} className="px-3 py-2">
                     Sequence No: {d.SequenceNo}
-                  </td>
+                  </td> */}
+                  <td colSpan={3} className="px-3 py-2 font-medium text-blue-700">
+                      Token: {d.Token ?? "-"}
+                    </td>
+
                 </tr>
               ))}
             </React.Fragment>

@@ -257,6 +257,7 @@ const ConfigureTokens = () => {
 
   const [selectedCategory, setSelectedCategory] = useState<number | "">("");
   const [selectedSubcategory, setSelectedSubcategory] = useState<number | "">("");
+  
 
   const [config, setConfig] = useState<TokenConfig>({
      id: null,     //  NEW
@@ -337,44 +338,63 @@ const ConfigureTokens = () => {
   // ---------- Save Final Settings ----------
 const handleSave = async () => {
   if (!selectedCategory || !selectedSubcategory) {
-    alert("❌ Please select both category and subcategory.");
+    alert(" Please select both category and subcategory.");
     return;
   }
 
-  const payload = {
-     Id: config.id ?? 0,  
-    CategoryId: selectedCategory,
-    SubCategoryId: selectedSubcategory,
-    Prefix: config.prefix,
-    InitializeNo: config.initializeNumber,
-    ResetTypeId: config.consecutiveBasis,
+  const validationPayload = {
+    id: config.id ?? 0,
+    categoryId: selectedCategory,
+    subCategoryId: selectedSubcategory,
+    prefix: config.prefix.trim(),
+    initializeNo: config.initializeNumber,
+    resetTypeId: config.consecutiveBasis,
   };
 
   try {
+    // 🔍 DUPLICATE CHECK
+    const validationRes = await API.isTokenPrefixSeriesExist(validationPayload);
+
+    // 🆕 ADD THIS CHECK
+    if (validationRes?.data?.IsAllowed === false) {
+      alert(
+        validationRes.data.Message ||
+          "Reset not allowed. Token already generated."
+      );
+      return; // ⛔ STOP SAVE
+    }
+
+    // 🔽 EXISTING SAVE PAYLOAD (UNCHANGED)
+    const payload = {
+      Id: config.id ?? 0,
+      CategoryId: selectedCategory,
+      SubCategoryId: selectedSubcategory,
+      Prefix: config.prefix,
+      InitializeNo: config.initializeNumber,
+      ResetTypeId: config.consecutiveBasis,
+    };
+
     const res = await API.saveTokenConfig(payload);
     console.log("API Response:", res.data);
-    alert("✅ Token configuration saved successfully!");
+    alert(" Token configuration saved successfully!");
 
-    // RESET CONFIG INPUTS
     setConfig({
-       id: null,
+      id: null,
       prefix: "",
       initializeNumber: "1",
       consecutiveBasis: CONSECUTIVE_BASIS.DAILY,
     });
 
-    // RESET ONLY SUBCATEGORY
     setSelectedSubcategory("");
     setSubcategories([]);
 
-    //  RELOAD SUBCATEGORY LIST FOR THE SELECTED CATEGORY
     if (selectedCategory) {
       handleCategoryChange(selectedCategory);
     }
 
-  } catch (err) {
-    console.error(err);
-    alert("❌ Failed to save configuration!");
+  } catch (err: any) {
+    // Network / server errors only
+    alert("Something went wrong while validating token configuration.");
   }
 };
 

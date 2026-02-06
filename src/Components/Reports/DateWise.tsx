@@ -52,17 +52,51 @@ const DatewiseReport = () => {
 
   /* ================= DERIVED DATA ================= */
 
-  const uniqueSubcategories = Array.from(new Set(reports.filter(r =>
-      categoryFilter ? r.Category === categoryFilter : true
-        )
-        .map(r => r.SubCategory)
-    )
+//   const uniqueSubcategories = Array.from(new Set(reports.filter(r =>
+//       categoryFilter ? r.Category === categoryFilter : true
+//         )
+//         .map(r => r.SubCategory)
+//     )
+// );
+
+const uniqueSubcategories = Array.from(
+  new Set(
+    reports
+      .filter(r =>
+        categoryFilter ? r.Category === categoryFilter : true
+      )
+      .map(r => r.SubCategory)
+      .filter(
+        sc => sc && sc.trim() !== "" && sc !== "-"
+      )
+  )
+);
+
+const uniqueUsers = Array.from(
+  new Set(
+    reports
+      .map(r => r.UserName)
+      .filter(
+        u => u && u.trim() !== "" && u !== "-"
+      )
+  )
+);
+
+const uniqueStatuses = Array.from(
+  new Set(
+    reports
+      .map(r => r.Status)
+      .filter(
+        s => s && s.trim() !== ""
+      )
+  )
 );
 
 
 
-  const uniqueUsers = Array.from(new Set(reports.map(r => r.UserName)));
-  const uniqueStatuses = Array.from(new Set(reports.map(r => r.Status)));
+
+  // const uniqueUsers = Array.from(new Set(reports.map(r => r.UserName)));
+  // const uniqueStatuses = Array.from(new Set(reports.map(r => r.Status)));
 
   
 
@@ -155,7 +189,8 @@ const handlePdfDownload = async () => {
       r.MobileNumber,
       r.Category,
       r.SubCategory,
-      r.UserName,
+      // r.UserName,
+      displayValue(r.UserName),
       formatTime24(r.CallTime),
       formatTime24(r.ReceiveTime),
       formatTime24(r.CompleteTime),
@@ -418,7 +453,8 @@ const exportToExcel = () => {
     "Mobile No": r.MobileNumber,
     "Category": r.Category,
     "Sub Category": r.SubCategory,
-    "User": r.UserName,
+    // "User": r.UserName,
+    "User": displayValue(r.UserName),
     // "Call Time (T2)": r.CallTime,
     // "Receive Time (T3)": r.ReceiveTime,
     // "Complete Time (T4)": r.CompleteTime,
@@ -529,6 +565,13 @@ const selectedDateText = (() => {
 
   return "";
 })();
+const displayValue = (value?: string | null) => {
+  if (!value || value.trim() === "" || value === "-") {
+    return "Not Attended";
+  }
+  return value;
+};
+
 
 
 
@@ -743,7 +786,12 @@ const selectedDateText = (() => {
         <td className="px-3 py-2">{r.MobileNumber}</td>
         <td className="px-3 py-2">{r.Category}</td>
         <td className="px-3 py-2">{r.SubCategory}</td>
-        <td className="px-3 py-2">{r.UserName}</td>
+     <td className="px-3 py-2">
+  {r.UserName && r.UserName.trim() !== "" && r.UserName !== "-"
+    ? r.UserName
+    : "Not Attended"}
+</td>
+
 
         <td className="px-3 py-2">{formatTime24(r.CallTime)}</td>
         <td className="px-3 py-2">{formatTime24(r.ReceiveTime)}</td>
