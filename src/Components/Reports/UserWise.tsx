@@ -336,102 +336,140 @@ const getDisplayNumber = (row: PatientRow) => {
 
 
 
-    const handlePrint = async () => {
-      const logoBase64 = await loadImageAsBase64(logo);
+  const handlePrint = async () => {
+  const logoBase64 = await loadImageAsBase64(logo);
 
-      const body: any[] = [];
+  const body: any[] = [];
 
+  // Table Header
+  body.push([
+    { text: "Sl.No", style: "tableHeader" },
+    { text: "User Name", style: "tableHeader" },
+    { text: "User ID", style: "tableHeader" },
+    { text: "Category", style: "tableHeader" },
+    { text: "Subcategory", style: "tableHeader" },
+    { text: "Numbers", style: "tableHeader" },
+  ]);
+
+  /* ================= SUMMARY PDF ================= */
+  if (reportType === "summary") {
+    filteredData.forEach((row, i) => {
       body.push([
-        { text: "Sl.No", style: "tableHeader" },
-        { text: "User Name", style: "tableHeader" },
-        { text: "User ID", style: "tableHeader" },
-        { text: "Category", style: "tableHeader" },
-        { text: "Subcategory", style: "tableHeader" },
-        { text: "Numbers", style: "tableHeader" },
+        i + 1,
+        row.userName,
+        row.userId,
+        row.category,
+        row.subcategory,
+        getDisplayNumber(row),
+      ]);
+    });
+  }
+
+  /* ================= DETAILED PDF ================= */
+  if (reportType === "detailed") {
+    filteredDetailedRows.forEach((row: any, i: number) => {
+      // Parent row
+      body.push([
+        i + 1,
+        row.userName,
+        row.userId,
+        row.category,
+        row.subcategory,
+        row.details.length,
       ]);
 
-      filteredData.forEach((row, i) => {
+      // Child rows
+      row.details.forEach((d: any) => {
         body.push([
-          i + 1,
-          row.userName,
-          row.userId,
-          row.category,
-          row.subcategory,
-          row.numbers,
+          "",        // Sl.No
+    "",        // User Name
+    "",        // User ID
+    "",        // Category
+    "",        // Subcategory
+    {
+      text: `Token: ${d.Token ?? "-"}`,
+      italics: true,
+      color: "#1d4ed8", // optional blue
+      alignment: "center",
+    },
         ]);
-
-        if (reportType === "detailed" && row.details) {
-          row.details.forEach((d) => {
-            body.push(["", d.date, d.service, "", "", ""]);
-          });
-        }
       });
+    });
+  }
 
-    const docDefinition: TDocumentDefinitions = {
-      pageOrientation: "landscape",
-      pageSize: "A4",
+  const docDefinition: TDocumentDefinitions = {
+    pageOrientation: "landscape",
+    pageSize: "A4",
+    pageMargins: [40, 100, 40, 60],
 
-      header: {
-        margin: [40, 20, 40, 0],
-        columns: [
-          { image: logoBase64, width: 120 },
-
-          {
-            stack: [
-              {
-                text: "UTKAL HEALTHCARE PRIVATE LIMITED",
-                alignment: "center",
-                bold: true,
-                fontSize: 20,
-                margin: [0, 0, 0, 10],
-              },
-              {
-                text: "C/3, NILADRI VIHAR, CHANDRASEKHARPUR, BHUBANESHWAR - 751021",
-                alignment: "center",
-                bold: true,
-                fontSize: 15,
-                characterSpacing:1.3,
-                margin: [2, 0, 0, 5],
-              },
-              {
-                text: "CONTACT : 0674-2651200/201   MOB : +91 6370704001/4002",
-                alignment: "center",
-                bold: true,
-                fontSize: 15,
-                characterSpacing:1.3,
-                margin: [0, 0, 0, 15],
-              },
-            ],
-          },
-        ],
-      },
-
-      content: [
-        { text: "User Wise Report:", style: "header", alignment: "left", margin: [0, 0, 0, 15] },
+    header: {
+      margin: [40, 20, 40, 0],
+      columns: [
+        { image: logoBase64, width: 120 },
         {
-          table: {
-            headerRows: 1,
-            widths: ["auto", "*", "*", "*", "*", "auto"],
-            body,
-          },
+          stack: [
+            {
+              text: "UTKAL HEALTHCARE PRIVATE LIMITED",
+              alignment: "center",
+              bold: true,
+              fontSize: 20,
+            },
+            {
+              text:
+                "C/3, NILADRI VIHAR, CHANDRASEKHARPUR, BHUBANESHWAR - 751021",
+              alignment: "center",
+              bold: true,
+              fontSize: 15,
+            },
+            {
+              text:
+                "CONTACT : 0674-2651200/201   MOB : +91 6370704001/4002",
+              alignment: "center",
+              bold: true,
+              fontSize: 15,
+              margin: [0, 0, 0, 15],
+            },
+          ],
         },
       ],
+    },
 
-      styles: {
-        header: { fontSize: 16, bold: true },
-        tableHeader: {
-          bold: true,
-          fillColor: "#22c55e",
-          color: "white",
-          alignment: "center",
+    content: [
+      {
+        text:
+          reportType === "summary"
+            ? "User Wise Summary Report"
+            : "User Wise Detailed Report",
+        style: "header",
+        margin: [0, 0, 0, 15],
+      },
+      {
+        table: {
+          headerRows: 1,
+          widths: ["auto", "*", "*", "*", "*", "auto"],
+          body,
         },
       },
+    ],
 
-      pageMargins: [40, 100, 40, 60],
-    };
-
-    pdfMake.createPdf(docDefinition).download("UserwiseReport.pdf");
+    styles: {
+      header: { fontSize: 16, bold: true },
+      tableHeader: {
+        bold: true,
+        fillColor: "#22c55e",
+        color: "white",
+        alignment: "center",
+      },
+    },
   };
+
+  pdfMake.createPdf(docDefinition).download(
+    reportType === "summary"
+      ? "Userwise_Summary_Report.pdf"
+      : "Userwise_Detailed_Report.pdf"
+  );
+};
+
 
   const exportToExcel = () => {
     const exportData: any[] = [];
@@ -464,10 +502,10 @@ const getDisplayNumber = (row: PatientRow) => {
           exportData.push({
             SrNo: "",
             UserName: d.Date ? new Date(d.Date).toLocaleString() : "-",
-            UserID: `Sequence No: ${d.SequenceNo}`,
+            UserID:  "",
             Category: "",
             Subcategory: "",
-            Numbers: "",
+            Numbers: `Token: ${d.Token ?? "-"}`,
           });
         });
     });
@@ -600,15 +638,33 @@ const filteredData = data.filter((row) => {
         {/* Clear Button */}
        <button
   onClick={() => {
-    setFromDate("today");
-    setToDate("today");
-    setAppliedFromDate("today");
-    setAppliedToDate("today");
+    const todayDate = new Date().toISOString().split("T")[0];
+
+    setFromDate(todayDate);
+    setToDate(todayDate);
+    setAppliedFromDate(todayDate);
+    setAppliedToDate(todayDate);
+
+    // 🔥 reset filters
+    setFilters({
+      userName: "",
+      userId: "",
+      category: "",
+      subcategory: "",
+      numbers: "",
+    });
+
+    //  clear summary data so table empties immediately
+    setData([]);
+
+    //  clear detailed data as well (safe)
+    setDetailData([]);
   }}
   className="text-sm text-blue-600 underline"
 >
   Clear
 </button>
+
 
 
       </div>
