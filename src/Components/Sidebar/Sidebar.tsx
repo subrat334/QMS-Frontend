@@ -545,7 +545,7 @@ const Sidebar = ({ collapsed, setCollapsed }: SidebarProps) => {
         {/* Logout Button */}
         <div className="mt-3">
           <button
-            onClick={logoutUser}
+            onClick={() => logoutUser("manual")}
             className="flex items-center gap-3 p-2 rounded-lg hover:bg-red-600 transition text-red-200 w-full text-left"
           >
             <LogOut size={20} />
