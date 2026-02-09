@@ -194,9 +194,9 @@ const handlePdfDownload = async () => {
       formatTime24(r.CallTime),
       formatTime24(r.ReceiveTime),
       formatTime24(r.CompleteTime),
-      calculateTAT(r.DateAndTime, r.CallTime),
-      calculateTAT(r.DateAndTime, r.ReceiveTime),
-      calculateTAT(r.ReceiveTime, r.CompleteTime),
+    formatTAT(r.TAT1),   // ✅ BACKEND VALUE
+    formatTAT(r.TAT2),   // ✅ BACKEND VALUE
+    formatTAT(r.TAT3),   
      {
   text:
     r.Remarks?.trim()
@@ -413,30 +413,30 @@ const fetchReports = async (from: string, to: string) => {
   };
 
   // Function to calculate TAT
-const calculateTAT = (start: string, end: string): string => {
-  if (!start || !end) return "N/A";
+// const calculateTAT = (start: string, end: string): string => {
+//   if (!start || !end) return "N/A";
 
-  const startDate = new Date(start);
-  const endDate = new Date(end);
+//   const startDate = new Date(start);
+//   const endDate = new Date(end);
 
-  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-    return "Invalid";
-  }
+//   if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+//     return "Invalid";
+//   }
 
-  const diffMs = endDate.getTime() - startDate.getTime();
+//   const diffMs = endDate.getTime() - startDate.getTime();
 
-  //  Prevent negative & -0 results
-  if (diffMs <= 0) return "0 min";
+//   //  Prevent negative & -0 results
+//   if (diffMs <= 0) return "0 min";
 
-  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+//   const diffMinutes = Math.floor(diffMs / (1000 * 60));
 
-  if (diffMinutes < 60) return `${diffMinutes} min`;
+//   if (diffMinutes < 60) return `${diffMinutes} min`;
 
-  const hours = Math.floor(diffMinutes / 60);
-  const minutes = diffMinutes % 60;
+//   const hours = Math.floor(diffMinutes / 60);
+//   const minutes = diffMinutes % 60;
 
-  return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-};
+//   return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+// };
 
 
 
@@ -462,9 +462,11 @@ const exportToExcel = () => {
       "Receive Time (T3)":formatTime24(r.ReceiveTime),
       "Complete Time (T4)":formatTime24(r.CompleteTime),
 
-    "TAT1": calculateTAT(r.DateAndTime, r.CallTime),
-    "TAT2": calculateTAT(r.DateAndTime, r.ReceiveTime),
-    "TAT3": calculateTAT(r.ReceiveTime, r.CompleteTime),
+    // "TAT1": calculateTAT(r.DateAndTime, r.CallTime),
+    "TAT1": formatTAT(r.TAT1),
+"TAT2": formatTAT(r.TAT2),
+"TAT3": formatTAT(r.TAT3),
+
       "Remarks": r.Remarks?.trim()
       ? r.Remarks
       : r.Status === "DONE"
@@ -571,6 +573,19 @@ const displayValue = (value?: string | null) => {
   }
   return value;
 };
+
+const formatTAT = (value?: string) => {
+  if (!value) return "0 min";
+
+  const [hh, mm] = value.split(":").map(Number);
+
+  if (hh === 0 && mm === 0) return "0 min";
+  if (hh === 0) return `${mm} min`;
+  if (mm === 0) return `${hh}h`;
+
+  return `${hh}h ${mm}m`;
+};
+
 
 
 
@@ -797,15 +812,10 @@ const displayValue = (value?: string | null) => {
         <td className="px-3 py-2">{formatTime24(r.ReceiveTime)}</td>
         <td className="px-3 py-2">{formatTime24(r.CompleteTime)}</td>
 
-        <td className="px-3 py-2">
-          {calculateTAT(r.DateAndTime, r.CallTime)}
-        </td>
-        <td className="px-3 py-2">
-          {calculateTAT(r.DateAndTime, r.ReceiveTime)}
-        </td>
-        <td className="px-3 py-2">
-          {calculateTAT(r.ReceiveTime, r.CompleteTime)}
-        </td>
+       <td className="px-3 py-2">{formatTAT(r.TAT1)}</td>
+<td className="px-3 py-2">{formatTAT(r.TAT2)}</td>
+<td className="px-3 py-2">{formatTAT(r.TAT3)}</td>
+
 
       <td className="px-3 py-2 text-left">
   {r.Remarks?.trim()
