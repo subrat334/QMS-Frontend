@@ -52,23 +52,23 @@ interface UserDetailRow {
 
 
 
-const loadImageAsBase64 = (url: string): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
+// const loadImageAsBase64 = (url: string): Promise<string> =>
+//   new Promise((resolve, reject) => {
+//     const img = new Image();
+//     img.crossOrigin = "anonymous";
 
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
-      ctx?.drawImage(img, 0, 0);
-      resolve(canvas.toDataURL("image/png"));
-    };
+//     img.onload = () => {
+//       const canvas = document.createElement("canvas");
+//       canvas.width = img.width;
+//       canvas.height = img.height;
+//       const ctx = canvas.getContext("2d");
+//       ctx?.drawImage(img, 0, 0);
+//       resolve(canvas.toDataURL("image/png"));
+//     };
 
-    img.onerror = reject;
-    img.src = url;
-  });
+//     img.onerror = reject;
+//     img.src = url;
+//   });
 // const logoBase64 = await loadImageAsBase64(logo);
 
 const UserwiseReport = () => {
@@ -336,138 +336,392 @@ const getDisplayNumber = (row: PatientRow) => {
 
 
 
-  const handlePrint = async () => {
-  const logoBase64 = await loadImageAsBase64(logo);
+  // Add these constants and cache at the top of your component
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+let logoCache: { url: string; data: string; timestamp: number } | null = null;
 
-  const body: any[] = [];
+// Add this function to optimize image loading (similar to datewise report)
+const createImageThumbnail = (
+  url: string,
+  maxWidth: number = 100
+): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
 
-  // Table Header
-  body.push([
-    { text: "Sl.No", style: "tableHeader" },
-    { text: "User Name", style: "tableHeader" },
-    { text: "User ID", style: "tableHeader" },
-    { text: "Category", style: "tableHeader" },
-    { text: "Subcategory", style: "tableHeader" },
-    { text: "Numbers", style: "tableHeader" },
-  ]);
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const scale = Math.min(1, maxWidth / img.width);
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
 
-  /* ================= SUMMARY PDF ================= */
-  if (reportType === "summary") {
-    filteredData.forEach((row, i) => {
-      body.push([
-        i + 1,
-        row.userName,
-        row.userId,
-        row.category,
-        row.subcategory,
-        getDisplayNumber(row),
-      ]);
-    });
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve("");
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+      resolve(dataUrl);
+    };
+
+    img.onerror = () => {
+      console.warn("Logo failed to load, continuing without it");
+      resolve("");
+    };
+
+    img.src = url;
+  });
+};
+
+const getCachedLogo = async (url: string): Promise<string> => {
+  const now = Date.now();
+
+  if (
+    logoCache &&
+    logoCache.url === url &&
+    now - logoCache.timestamp < CACHE_DURATION
+  ) {
+    return logoCache.data;
   }
 
-  /* ================= DETAILED PDF ================= */
-  if (reportType === "detailed") {
-    filteredDetailedRows.forEach((row: any, i: number) => {
-      // Parent row
-      body.push([
-        i + 1,
-        row.userName,
-        row.userId,
-        row.category,
-        row.subcategory,
-        row.details.length,
-      ]);
+  const logoData = await createImageThumbnail(url);
+  logoCache = { url, data: logoData, timestamp: now };
+  return logoData;
+};
 
-      // Child rows
-      row.details.forEach((d: any) => {
+// Add this state at the top with your other states
+const [pdfLoading, setPdfLoading] = useState(false);
+
+// OPTIMIZED handlePrint function based on your datewise report
+const handlePrint = async () => {
+  // Early validation
+  const dataToExport = reportType === "summary" ? filteredData : filteredDetailedRows;
+  if (!dataToExport || dataToExport.length === 0) {
+    alert("No data to export");
+    return;
+  }
+
+  try {
+    // Show loading state
+    setPdfLoading(true);
+    console.time("Userwise PDF Generation");
+
+    // 1. Get logo in parallel with data processing
+    const logoPromise = getCachedLogo(logo);
+
+    // 2. Process data in optimized way
+    const body: any[] = [];
+
+    // Prepare headers
+    const headers = reportType === "summary" 
+      ? ["Sl.No", "User Name", "User ID", "Category", "Subcategory", "Numbers"]
+      : ["Sl.No", "User Name", "User ID", "Category", "Subcategory", "Token Details"];
+
+    // Add headers
+    body.push(
+      headers.map((h) => ({
+        text: h,
+        style: "tableHeader",
+        fontSize: 8,
+      }))
+    );
+
+    // 3. Process rows with performance limits
+    if (reportType === "summary") {
+      // Limit rows for performance
+      const MAX_ROWS = 1000;
+      const dataToProcess = filteredData.slice(0, MAX_ROWS);
+      
+      dataToProcess.forEach((row, index) => {
         body.push([
-          "",        // Sl.No
-    "",        // User Name
-    "",        // User ID
-    "",        // Category
-    "",        // Subcategory
-    {
-      text: `Token: ${d.Token ?? "-"}`,
-      italics: true,
-      color: "#1d4ed8", // optional blue
-      alignment: "center",
-    },
+          index + 1,
+          row.userName || "-",
+          row.userId || "-",
+          row.category || "-",
+          row.subcategory || "-",
+          { 
+            text: getDisplayNumber(row).toString(), 
+            alignment: "center",
+            fontSize: 9 
+          },
         ]);
       });
-    });
-  }
 
-  const docDefinition: TDocumentDefinitions = {
-    pageOrientation: "landscape",
-    pageSize: "A4",
-    pageMargins: [40, 100, 40, 60],
+      // Add truncation note if needed
+      if (filteredData.length > MAX_ROWS) {
+        body.push([
+          {
+            text: `* Showing first ${MAX_ROWS} of ${filteredData.length} records for optimal performance`,
+            colSpan: 6,
+            alignment: "center",
+            color: "#666",
+            italics: true,
+            fontSize: 7,
+          }
+        ]);
+      }
+    } 
+    else if (reportType === "detailed") {
+      // Detailed report with limits
+      const MAX_USERS = 200;
+      const MAX_DETAILS_PER_USER = 15;
+      
+      const usersToProcess = filteredDetailedRows.slice(0, MAX_USERS);
+      let rowCounter = 0;
+      
+      usersToProcess.forEach((row: any) => {
+        rowCounter++;
+        
+        // Parent row
+        body.push([
+          rowCounter,
+          row.userName || "-",
+          row.userId || "-",
+          row.category || "-",
+          row.subcategory || "-",
+          { 
+            text: row.details?.length?.toString() || "0", 
+            alignment: "center",
+            bold: true,
+            fontSize: 9 
+          },
+        ]);
+        
+        // Child rows (limited)
+        const detailsToShow = row.details?.slice(0, MAX_DETAILS_PER_USER) || [];
+        detailsToShow.forEach((detail: any) => {
+          body.push([
+            { text: "", fontSize: 8 },
+            { text: "", fontSize: 8 },
+            { text: "", fontSize: 8 },
+            { text: "", fontSize: 8 },
+            { text: "", fontSize: 8 },
+            { 
+              text: `Token: ${detail.Token || "-"}`,
+              fontSize: 8,
+              color: "#1d4ed8",
+              italics: true,
+              alignment: "center",
+            },
+          ]);
+        });
+        
+        // Add detail truncation note
+        if (row.details?.length > MAX_DETAILS_PER_USER) {
+          body.push([
+            {
+              text: `* Showing ${MAX_DETAILS_PER_USER} of ${row.details.length} tokens for this user`,
+              colSpan: 6,
+              alignment: "center",
+              color: "#666",
+              fontSize: 7,
+            }
+          ]);
+        }
+      });
+      
+      // Add user truncation note
+      if (filteredDetailedRows.length > MAX_USERS) {
+        body.push([
+          {
+            text: `* Report limited to ${MAX_USERS} users (of ${filteredDetailedRows.length}) for optimal performance`,
+            colSpan: 6,
+            alignment: "center",
+            color: "#666",
+            italics: true,
+            fontSize: 7,
+          }
+        ]);
+      }
+    }
 
-    header: {
-      margin: [40, 20, 40, 0],
-      columns: [
-        { image: logoBase64, width: 120 },
+    // 4. Get logo
+    const logoBase64 = await logoPromise;
+
+    // 5. Create PDF definition - optimized similar to datewise report
+    const docDefinition: TDocumentDefinitions = {
+      pageOrientation: "landscape",
+      pageSize: "A4",
+      pageMargins: [15, 100, 15, 40],
+      compress: true,
+
+      header: logoBase64
+        ? {
+            columns: [
+              { 
+                image: logoBase64, 
+                width: 120, 
+                margin: [15, 10, 0, 0] 
+              },
+              {
+                stack: [
+                  {
+                    text: "UTKAL HEALTHCARE PRIVATE LIMITED",
+                    alignment: "center",
+                    characterSpacing: 1.3,
+                    bold: true,
+                    fontSize: 17,
+                    margin: [0, 0, 0, 5],
+                  },
+                  {
+                    text: "C/3, NILADRI VIHAR, CHANDRASEKHARPUR, BHUBANESHWAR - 751021",
+                    alignment: "center",
+                    bold: true,
+                    fontSize: 15,
+                    characterSpacing: 1.3,
+                    margin: [0, 0, 0, 3],
+                  },
+                  {
+                    text: "CONTACT : 0674-2651200/201   MOB : +91 6370704001/4002",
+                    alignment: "center",
+                    characterSpacing: 1.3,
+                    bold: true,
+                    fontSize: 15,
+                    margin: [0, 0, 0, 0],
+                  },
+                ],
+                width: "*",
+              },
+            ],
+            margin: [0, 10, 0, 0],
+          }
+        : undefined,
+
+      content: [
         {
-          stack: [
-            {
-              text: "UTKAL HEALTHCARE PRIVATE LIMITED",
-              alignment: "center",
-              bold: true,
-              fontSize: 20,
-            },
-            {
-              text:
-                "C/3, NILADRI VIHAR, CHANDRASEKHARPUR, BHUBANESHWAR - 751021",
-              alignment: "center",
-              bold: true,
-              fontSize: 15,
-            },
-            {
-              text:
-                "CONTACT : 0674-2651200/201   MOB : +91 6370704001/4002",
-              alignment: "center",
-              bold: true,
-              fontSize: 15,
-              margin: [0, 0, 0, 15],
-            },
-          ],
+          text: reportType === "summary" 
+            ? "User Wise Summary Report" 
+            : "User Wise Detailed Report",
+          fontSize: 12,
+          bold: true,
+          margin: [0, 0, 0, 10],
+          alignment: "center",
+        },
+        {
+    text: selectedDateText, // <-- ADD THIS LINE (use your existing selectedDateText)
+    fontSize: 11,
+    alignment: "center",
+    color: "#555",
+    margin: [0, 0, 0, 10], // Margin below date text
+  },
+        {
+          table: {
+            headerRows: 1,
+            dontBreakRows: false,
+            widths: reportType === "summary" 
+              ? ['8%', '20%', '15%', '19%', '19%', '19%']
+              : ['8%', '18%', '14%', '18%', '18%', '24%'],
+            body,
+          },
+          layout: {
+            hLineWidth: (i: number) => (i === 0 || i === body.length ? 1 : 0.5),
+            vLineWidth: () => 0.5,
+            hLineColor: (i: number) => (i === 0 ? "#000" : "#aaa"),
+            vLineColor: () => "#ccc",
+            paddingTop: () => 3,
+            paddingBottom: () => 3,
+          },
         },
       ],
-    },
 
-    content: [
-      {
-        text:
-          reportType === "summary"
-            ? "User Wise Summary Report"
-            : "User Wise Detailed Report",
-        style: "header",
-        margin: [0, 0, 0, 15],
-      },
-      {
-        table: {
-          headerRows: 1,
-          widths: ["auto", "*", "*", "*", "*", "auto"],
-          body,
+      styles: {
+        tableHeader: {
+          bold: true,
+          fontSize: 9,
+          fillColor: "#16a34a",
+          color: "white",
+          alignment: "center",
         },
       },
-    ],
 
-    styles: {
-      header: { fontSize: 16, bold: true },
-      tableHeader: {
-        bold: true,
-        fillColor: "#22c55e",
-        color: "white",
-        alignment: "center",
+      defaultStyle: {
+        fontSize: 9,
       },
-    },
-  };
+    };
 
-  pdfMake.createPdf(docDefinition).download(
-    reportType === "summary"
-      ? "Userwise_Summary_Report.pdf"
-      : "Userwise_Detailed_Report.pdf"
-  );
+    console.timeEnd("Userwise PDF Generation");
+    console.time("Userwise PDF Download");
+
+    // 6. Generate and trigger download
+    const pdfDocGenerator = pdfMake.createPdf(docDefinition);
+    
+    // Use promise wrapper similar to datewise report
+    await new Promise<void>((resolve, reject) => {
+      let downloadCompleted = false;
+      let fallbackTriggered = false;
+      
+      // Timeout to reset loading state
+      const timeoutId = setTimeout(() => {
+        if (!downloadCompleted) {
+          console.warn("PDF download timeout, resetting loading state");
+          setPdfLoading(false);
+        }
+      }, 3000);
+      
+      try {
+        // Method 1: Try download() first
+        pdfDocGenerator.download(
+          reportType === "summary"
+            ? `Userwise_Summary_Report_${new Date().toISOString().slice(0, 10)}.pdf`
+            : `Userwise_Detailed_Report_${new Date().toISOString().slice(0, 10)}.pdf`,
+          () => {
+            downloadCompleted = true;
+            clearTimeout(timeoutId);
+            console.timeEnd("Userwise PDF Download");
+            resolve();
+          }
+        );
+      } catch (error) {
+        if (fallbackTriggered) {
+          clearTimeout(timeoutId);
+          reject(error);
+          return;
+        }
+        
+        console.error("PDF download() failed, trying blob method:", error);
+        fallbackTriggered = true;
+        
+        // Method 2: Fallback to blob approach
+        try {
+          pdfDocGenerator.getBlob((blob: Blob) => {
+            downloadCompleted = true;
+            clearTimeout(timeoutId);
+            
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = reportType === "summary"
+              ? `Userwise_Summary_Report_${new Date().toISOString().slice(0, 10)}.pdf`
+              : `Userwise_Detailed_Report_${new Date().toISOString().slice(0, 10)}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            
+            // Cleanup
+            setTimeout(() => {
+              document.body.removeChild(link);
+              URL.revokeObjectURL(url);
+            }, 100);
+            
+            console.timeEnd("Userwise PDF Download");
+            resolve();
+          });
+        } catch (blobError) {
+          clearTimeout(timeoutId);
+          console.error("Blob method also failed:", blobError);
+          reject(blobError);
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error("Userwise PDF generation failed:", error);
+    alert("Failed to generate PDF. Please try again.");
+  } finally {
+    // Always reset loading state
+    setPdfLoading(false);
+  }
 };
 
 
@@ -587,9 +841,13 @@ const filteredData = data.filter((row) => {
             <option value="summary">Summary Report</option>
             <option value="detailed">Detailed Report</option>
           </select>
-          <button onClick={handlePrint} className="bg-blue-600 text-white px-3 py-1 rounded-md text-sm">
-            Print
-          </button>
+          <button 
+  onClick={handlePrint} 
+  className="bg-blue-600 text-white px-3 py-1 rounded-md text-sm"
+  disabled={pdfLoading || (reportType === "summary" ? filteredData.length === 0 : filteredDetailedRows.length === 0)}
+>
+  {pdfLoading ? "Generating PDF..." : "Print"}
+</button>
           <button onClick={exportToExcel} className="bg-green-600 text-white px-3 py-1 rounded-md text-sm">
             Export Excel
           </button>

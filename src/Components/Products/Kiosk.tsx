@@ -1043,6 +1043,8 @@ const Kiosk = () => {
   const [printing, setPrinting] = useState(false);
 const [generatedToken, setGeneratedToken] = useState<string | null>(null);
 const [, setPrintFailed] = useState(false);
+const [tokenError, setTokenError] = useState<string | null>(null);
+
 
     const getGridColumns = (count: number) => {
     if (count <= 1) return 1;
@@ -1074,24 +1076,6 @@ const [, setPrintFailed] = useState(false);
     return () => document.removeEventListener("fullscreenchange", handler);
   }, []);
 
-  // Load user subcategories
-  // useEffect(() => {
-  //   if (privileges?.categories) {
-  //     const formattedSubs: Subcategory[] = privileges.categories.flatMap(
-  //       (cat: any) =>
-  //         (cat.SubCategories || []).map((sub: any) => ({
-  //           id: Number(sub.SubCategoryId),
-  //           name: sub.SubCategoryName,
-  //           categoryId: Number(cat.CategoryId),
-  //           categoryName: cat.CategoryName,
-  //           counters: sub.Counters || [],
-  //         }))
-  //     );
-
-  //     setSelectedSubs(formattedSubs);
-  //     setVisibleSubs(formattedSubs.map((s) => s.id));
-  //   }
-  // }, [privileges]);
 
   useEffect(() => {
   const loadSubcategories = async () => {
@@ -1223,60 +1207,6 @@ const silentPrint = async (
     return result;
   };
 
-  // Confirm Token
-//   const handleConfirm = async () => {
-//     if (!selectedCard) return;
-
-//     const regex = /^[6-9]\d{9}$/;
-//     if (!regex.test(phoneNumber)) {
-//       toast.error("Enter valid 10-digit mobile number");
-//       return;
-//     }
-
-//     // if (!selectedCard.counters?.length) {
-//     //   toast.error("No counters assigned to this subcategory");
-//     //   return;
-//     // }
-
-//     // setLoadingToken(true);
-
-//      setPrinting(true);
-
-//     try {
-//       const payload = {
-//         CategoryId: selectedCard.categoryId,
-//         SubCategoryId: selectedCard.id,
-//         MobileNumber: phoneNumber,
-//         DeliveryMethod: "Counter",
-//       };
-
-//      const res = await api.post("/Patient/generateToken", payload);
-//     const token = res.data?.Token;
-//     const now = new Date().toLocaleString("en-GB", { hour12: false });
- 
-//     // 2️⃣ Attempt silent print
-//     const printResult = await silentPrint(selectedCard.name, token, now);
- 
-//     if (!printResult.printed) {
-//       // Print failed → show token to user
-//       setGeneratedToken(token);
-//       setPrintFailed(true);
-//     } else {
-//       // Print succeeded → auto-close modal
-//       setShowModal(false);
-//       setPhoneNumber("");
-//       setCursorIndex(0);
-//       setSelectedCard(null);
-//       setGeneratedToken(null);
-//       setPrintFailed(false);
-//     }
-//   } catch (err) {
-//     // API failure → show toast (staff only), patient sees nothing broken
-//     toast.error("Unable to generate token");
-//   } finally {
-//     setPrinting(false);
-//   }
-// };
 const handleConfirm = async () => {
   if (!selectedCard) return;
 
@@ -1297,33 +1227,49 @@ const handleConfirm = async () => {
     };
 
     const res = await api.post("/Patient/generateToken", payload);
-    const token = res.data?.Token;
+
+    //  TOKEN NOT CONFIGURED (backend controlled)
+    if (!res.data?.Token) {
+      setShowModal(false); // close keypad modal
+      setTokenError(
+        "Token is not configured for this service.\nPlease contact the hospital staff."
+      );
+      return;
+    }
+
+    const token = res.data.Token;
     const now = new Date().toLocaleString("en-GB", { hour12: false });
 
-    // Attempt silent print
     const printResult = await silentPrint(selectedCard.name, token, now);
 
     if (!printResult.printed) {
-      // ❌ Print failed → show token
+      //  Print failed → show token
       setGeneratedToken(token);
       setPrintFailed(true);
     } else {
-      // ✅ Print success → brief confirmation then close
-       setTimeout(() => {
+      // ✅ Print success
+      setTimeout(() => {
         setShowModal(false);
         setPhoneNumber("");
         setCursorIndex(0);
         setSelectedCard(null);
         setGeneratedToken(null);
         setPrintFailed(false);
-      }, 800); // ⏱ small UX delay
+      }, 800);
     }
-  } catch (err) {
-    toast.error("Unable to generate token");
+  } catch (err: any) {
+    //  BACKEND ERROR (ex: token not configured)
+    const message =
+      err?.response?.data?.message ||
+      "Token is not configured for this service.\nPlease contact the hospital staff.";
+
+    setShowModal(false);
+    setTokenError(message);
   } finally {
     setPrinting(false);
   }
 };
+
 
  
 
@@ -1470,8 +1416,9 @@ const handleConfirm = async () => {
 
         {/* Service Cards */}
         <div
-          className={`flex-1 mt-6 px-4 pb-6 ${isFullscreen ? "overflow-hidden" : "overflow-y-auto"}`}
-        >
+            className={`flex-1 mt-6 px-4 pb-6 overflow-y-auto`}
+          >
+
           {loadingSubs && (
             <div className="w-full text-center text-green-700 font-semibold py-6">
               Loading services...
@@ -1642,6 +1589,30 @@ const handleConfirm = async () => {
     </div>
   </div>
 )}
+
+{/* ------------ TOKEN ERROR POPUP (GLOBAL) ------------ */}
+{tokenError && (
+  <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-9999">
+    <div className="bg-white rounded-3xl shadow-2xl w-[360px] p-6 text-center">
+      <h2 className="text-2xl font-bold text-red-600 mb-4">
+        Token Not Available
+      </h2>
+
+      <p className="text-gray-700 whitespace-pre-line">
+        {tokenError}
+      </p>
+
+      <button
+        onClick={() => setTokenError(null)}
+        className="mt-6 px-6 py-3 bg-green-600 hover:bg-green-700
+                   text-white text-lg font-semibold rounded-2xl"
+      >
+        OK
+      </button>
+    </div>
+  </div>
+)}
+
  
     </div>
   );

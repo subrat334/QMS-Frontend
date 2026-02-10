@@ -333,6 +333,13 @@ const handlePdfDownload = async () => {
           margin: [0, 0, 0, 10],
           alignment: "center",
         },
+  //       {
+  //   text: selectedDateText, // <-- ADD THIS LINE (use your existing selectedDateText)
+  //   fontSize: 11,
+  //   alignment: "center",
+  //   color: "#555",
+  //   margin: [0, 0, 0, 10], // Margin below date text
+  // },
         {
           table: {
             headerRows: 1,

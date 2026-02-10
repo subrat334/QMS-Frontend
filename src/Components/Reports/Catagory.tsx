@@ -101,181 +101,301 @@ useEffect(() => {
 }, [categoryFilter, subcategoryFilter, pageNumber, reportType]);
 
 
-const loadImageAsBase64 = (url: string): Promise<string> => {
-  return new Promise((resolve, reject) => {
+// Add this at the top of your component (outside the component function)
+const CACHE_DURATION = 5 * 60 * 1000;
+let logoCache: { url: string; data: string; timestamp: number } | null = null;
+
+const createImageThumbnail = (
+  url: string,
+  maxWidth: number = 100
+): Promise<string> => {
+  return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
+
     img.onload = () => {
       const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
+      const scale = Math.min(1, maxWidth / img.width);
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+
       const ctx = canvas.getContext("2d");
-      ctx?.drawImage(img, 0, 0);
-      resolve(canvas.toDataURL("image/png"));
+      if (!ctx) {
+        resolve("");
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+      resolve(dataUrl);
     };
-    img.onerror = reject;
+
+    img.onerror = () => {
+      console.warn("Logo failed to load");
+      resolve("");
+    };
+
     img.src = url;
   });
 };
 
-const handlePrint = async () => {
-  const logoBase64 = await loadImageAsBase64(logo);
+const getCachedLogo = async (url: string): Promise<string> => {
+  const now = Date.now();
 
-  const body: any[] = [];
-
-  // ================= HEADER ROW =================
-  if (reportType === "summary") {
-    body.push([
-      { text: "Sr.No", style: "tableHeader" },
-      { text: "Category", style: "tableHeader" },
-      { text: "Tokens", style: "tableHeader" },
-      { text: "Completed", style: "tableHeader" },
-      { text: "Cancelled", style: "tableHeader" },
-      { text: "Auto Closed", style: "tableHeader" },
-    ]);
-
-    summaryData.forEach((row, i) => {
-      body.push([
-        i + 1,
-        row.category,
-        row.tokens,
-        row.completed,
-        row.cancelled,
-        row.autoClosed,
-      ]);
-    });
-
-    // GRAND TOTAL
-    body.push([
-      { text: "", bold: true },
-      { text: "Grand Total", bold: true },
-      grandTotal.tokens,
-      grandTotal.completed,
-      grandTotal.cancelled,
-      grandTotal.autoClosed,
-    ]);
-  } else {
-    body.push([
-      { text: "Sr.No", style: "tableHeader" },
-      { text: "Date", style: "tableHeader" },
-      { text: "Category", style: "tableHeader" },
-      { text: "Subcategory", style: "tableHeader" },
-      { text: "Tokens", style: "tableHeader" },
-      { text: "Completed", style: "tableHeader" },
-      { text: "Cancelled", style: "tableHeader" },
-      { text: "Auto Closed", style: "tableHeader" },
-    ]);
-
-    filteredData.forEach((row, i) => {
-      body.push([
-        i + 1,
-        new Date(row.date).toLocaleDateString("en-GB"),
-        row.category,
-        row.subcategory,
-        row.tokens,
-        row.completed,
-        row.cancelled,
-        row.autoClosed,
-      ]);
-    });
-
-    // GRAND TOTAL
-    body.push([
-      "",
-      "",
-      { text: "Grand Total", bold: true },
-      "",
-      grandTotal.tokens,
-      grandTotal.completed,
-      grandTotal.cancelled,
-      grandTotal.autoClosed,
-    ]);
+  if (
+    logoCache &&
+    logoCache.url === url &&
+    now - logoCache.timestamp < CACHE_DURATION
+  ) {
+    return logoCache.data;
   }
 
-  // ================= PDF DEFINITION =================
-  const docDefinition: any = {
-    pageOrientation: "landscape",
-    pageSize: "A4",
+  const logoData = await createImageThumbnail(url);
+  logoCache = { url, data: logoData, timestamp: now };
+  return logoData;
+};
 
-    header: {
-      margin: [40, 20, 40, 0],
-      columns: [
-        { image: logoBase64, width: 120 },
+// Then update your handlePrint function with proper type handling:
+const handlePrint = async () => {
+  // Early validation
+  let dataToExport: SummaryRow[] | CategoryRow[];
+  let totalLength: number;
+  
+  if (reportType === "summary") {
+    dataToExport = summaryData;
+    totalLength = summaryData.length;
+  } else {
+    dataToExport = filteredData;
+    totalLength = filteredData.length;
+  }
+  
+  if (!dataToExport || dataToExport.length === 0) {
+    alert("No data to export");
+    return;
+  }
+
+  try {
+    console.time("Categorywise PDF Generation");
+
+    // 1. Get optimized logo
+    const logoBase64 = await getCachedLogo(logo);
+
+    const body: any[] = [];
+
+    // 2. Process with performance limits
+    const MAX_ROWS = 1000;
+    const dataToProcess = dataToExport.slice(0, MAX_ROWS);
+
+    if (reportType === "summary") {
+      // Header for Summary Report
+      body.push([
+        { text: "Sr.No", style: "tableHeader", fontSize: 12 },
+        { text: "Category", style: "tableHeader", fontSize: 12 },
+        { text: "Tokens", style: "tableHeader", fontSize: 12 },
+        { text: "Completed", style: "tableHeader", fontSize: 12 },
+        { text: "Cancelled", style: "tableHeader", fontSize: 12 },
+        { text: "Auto Closed", style: "tableHeader", fontSize: 12 },
+      ]);
+
+      // Rows for Summary - cast to SummaryRow[]
+      (dataToProcess as SummaryRow[]).forEach((row, i) => {
+        body.push([
+          { text: (i + 1).toString(), fontSize: 12, alignment: "center" },
+          { text: row.category || "-", fontSize: 12 },
+          { text: row.tokens?.toString() || "0", fontSize: 12, alignment: "center" },
+          { text: row.completed?.toString() || "0", fontSize: 12, alignment: "center" },
+          { text: row.cancelled?.toString() || "0", fontSize: 12, alignment: "center" },
+          { text: row.autoClosed?.toString() || "0", fontSize: 12, alignment: "center" },
+        ]);
+      });
+
+      // GRAND TOTAL
+      body.push([
+        { text: "", bold: true },
+        { text: "Grand Total", bold: true, fontSize: 12 },
+        { text: grandTotal.tokens?.toString() || "0", fontSize: 12, alignment: "center" },
+        { text: grandTotal.completed?.toString() || "0", fontSize: 12, alignment: "center" },
+        { text: grandTotal.cancelled?.toString() || "0", fontSize: 12, alignment: "center" },
+        { text: grandTotal.autoClosed?.toString() || "0", fontSize: 12, alignment: "center" },
+      ]);
+      
+      // Truncation note
+      if (totalLength > MAX_ROWS) {
+        body.push([
+          {
+            text: `* Showing first ${MAX_ROWS} of ${totalLength} categories`,
+            colSpan: 6,
+            fontSize: 7,
+            color: "#666",
+            alignment: "center",
+          }
+        ]);
+      }
+    } else {
+      // Header for Detailed Report
+      body.push([
+        { text: "Sr.No", style: "tableHeader", fontSize: 9 },
+        { text: "Date", style: "tableHeader", fontSize: 9 },
+        { text: "Category", style: "tableHeader", fontSize: 9 },
+        { text: "Subcategory", style: "tableHeader", fontSize: 9 },
+        { text: "Tokens", style: "tableHeader", fontSize: 9 },
+        { text: "Completed", style: "tableHeader", fontSize: 9 },
+        { text: "Cancelled", style: "tableHeader", fontSize: 9 },
+        { text: "Auto Closed", style: "tableHeader", fontSize: 9 },
+      ]);
+
+      // Rows for Detailed - cast to CategoryRow[]
+      (dataToProcess as CategoryRow[]).forEach((row, i) => {
+        body.push([
+          { text: (i + 1).toString(), fontSize: 8, alignment: "center" },
+          { 
+            text: row.date 
+              ? new Date(row.date).toLocaleDateString("en-GB") 
+              : "-", 
+            fontSize: 14
+          },
+          { text: row.category || "-", fontSize: 12 },
+          { text: row.subcategory || "-", fontSize: 12 },
+          { text: row.tokens?.toString() || "0", fontSize: 12, alignment: "center" },
+          { text: row.completed?.toString() || "0", fontSize: 12, alignment: "center" },
+          { text: row.cancelled?.toString() || "0", fontSize: 12, alignment: "center" },
+          { text: row.autoClosed?.toString() || "0", fontSize: 12, alignment: "center" },
+        ]);
+      });
+
+      // GRAND TOTAL for Detailed
+      body.push([
+        { text: "", fontSize: 12 },
+        { text: "", fontSize: 12 },
+        { text: "Grand Total", bold: true, fontSize: 9 },
+        { text: "", fontSize: 12 },
+        { text: grandTotal.tokens?.toString() || "0", fontSize: 12, alignment: "center" },
+        { text: grandTotal.completed?.toString() || "0", fontSize: 12, alignment: "center" },
+        { text: grandTotal.cancelled?.toString() || "0", fontSize: 12, alignment: "center" },
+        { text: grandTotal.autoClosed?.toString() || "0", fontSize: 12, alignment: "center" },
+      ]);
+      
+      // Truncation note
+      if (totalLength > MAX_ROWS) {
+        body.push([
+          {
+            text: `* Showing first ${MAX_ROWS} of ${totalLength} records`,
+            colSpan: 8,
+            fontSize: 7,
+            color: "#666",
+            alignment: "center",
+          }
+        ]);
+      }
+    }
+
+    // 3. Create PDF with optimizations
+    const docDefinition: any = {
+      pageOrientation: "landscape",
+      pageSize: "A4",
+      compress: true,
+      pageMargins: [15, 80, 15, 40],
+
+      header: {
+        margin: [15, 10, 15, 0],
+        columns: [
+          { image: logoBase64, width: 80 },
+          {
+            stack: [
+              {
+                text: "UTKAL HEALTHCARE PRIVATE LIMITED",
+                alignment: "center",
+                bold: true,
+                characterSpacing:1.3,
+                
+                    fontSize: 17, 
+                margin: [0, 0, 0, 5],
+              },
+              {
+                text: "C/3, NILADRI VIHAR, CHANDRASEKHARPUR, BHUBANESHWAR - 751021",
+                alignment: "center",
+                bold: true,
+                 characterSpacing:1.3,
+                fontSize: 15,
+                margin: [0, 0, 0, 3],
+              },
+              {
+                text: "CONTACT : 0674-2651200/201   MOB : +91 6370704001/4002",
+                alignment: "center",
+                bold: true,
+                 characterSpacing:1.3,
+                fontSize: 15,
+                margin: [0, 0, 0, 0],
+              },
+            ],
+          },
+        ],
+      },
+
+      content: [
         {
-          stack: [
-            {
-              text: "UTKAL HEALTHCARE PRIVATE LIMITED",
-              alignment: "center",
-              bold: true,
-              fontSize: 20,
-              margin: [0, 0, 0, 10],
-            },
-            {
-              text: "C/3, NILADRI VIHAR, CHANDRASEKHARPUR, BHUBANESHWAR - 751021",
-              alignment: "center",
-              bold: true,
-              fontSize: 15,
-              characterSpacing: 1.3,
-              margin: [0, 0, 0, 5],
-            },
-            {
-              text: "CONTACT : 0674-2651200/201   MOB : +91 6370704001/4002",
-              alignment: "center",
-              bold: true,
-              fontSize: 15,
-              characterSpacing: 1.3,
-              margin: [0, 0, 0, 15],
-            },
-          ],
-        },
-      ],
-    },
-
-    content: [
-      {
-        text:
-          reportType === "summary"
+          text: reportType === "summary"
             ? "Category Wise Summary Report:"
             : "Category Wise Detailed Report:",
-        style: "header",
-        alignment: "left",
-        margin: [0, 0, 0, 15],
-      },
-      {
-        table: {
-          headerRows: 1,
-          widths:
-            reportType === "summary"
-              ? ["auto", "*", "auto", "auto", "auto", "auto"]
+          fontSize: 14,
+          bold: true,
+          alignment: "left",
+          margin: [0, 0, 0, 10],
+        },
+        
+        {
+          table: {
+            headerRows: 1,
+            widths: reportType === "summary"
+              ?  ['10%', '30%', '15%', '15%', '15%', '15%']
               : ["auto", "*", "*", "*", "auto", "auto", "auto", "auto"],
-          body,
+            body,
+          },
+          layout: {
+            hLineWidth: () => 0.8,
+            vLineWidth: () => 0.8,
+            hLineColor: () => '#ccc',
+            vLineColor: () => '#ccc',
+            paddingLeft: () => 2,
+            paddingRight: () => 2,
+            paddingTop: () => 2,
+            paddingBottom: () => 2,
+          },
+        },
+      ],
+
+      styles: {
+        header: {
+          fontSize: 15,
+          bold: true,
+        },
+        tableHeader: {
+          bold: true,
+          fillColor: "#22c55e",
+          color: "white",
+          alignment: "center",
         },
       },
-    ],
 
-    styles: {
-      header: {
-        fontSize: 16,
-        bold: true,
+      defaultStyle: {
+        fontSize: 8,
+        lineHeight: 1
       },
-      tableHeader: {
-        bold: true,
-        fillColor: "#22c55e",
-        color: "white",
-        alignment: "center",
-      },
-    },
+    };
 
-    pageMargins: [40, 100, 40, 60],
-  };
+    console.timeEnd("Categorywise PDF Generation");
 
-  pdfMake
-    .createPdf(docDefinition)
-    .download(
+    // 4. Generate and download
+    pdfMake.createPdf(docDefinition).download(
       reportType === "summary"
-        ? "CategoryWiseSummaryReport.pdf"
-        : "CategoryWiseDetailedReport.pdf"
+        ? `CategoryWise_Summary_${new Date().toISOString().slice(0, 10)}.pdf`
+        : `CategoryWise_Detailed_${new Date().toISOString().slice(0, 10)}.pdf`
     );
+
+  } catch (error) {
+    console.error("Categorywise PDF generation failed:", error);
+    alert("Failed to generate PDF. Please try again.");
+  }
 };
 
 

@@ -1,10 +1,10 @@
 
 import { useState } from "react";
-import {  useNavigate } from "react-router-dom";
+// import {  useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../../services/api";
 import logo from "../../assets/utkal.png";
-import { ROLE_ROUTES, type UserRoleType } from "../../constants/AllConstants";
+// import { ROLE_ROUTES, type UserRoleType } from "../../constants/AllConstants";
 import { useAuth } from "../../context/AuthContext";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -14,7 +14,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const { login } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string>("");
 
@@ -42,17 +42,17 @@ const Login = () => {
         localStorage.setItem("UserType", data.UserType);
 
         toast.success("Login successful!");
-        login(data);
 
-        const userType = Number(data.UserType) as UserRoleType;
-        const redirectPath = ROLE_ROUTES[userType] || "/";
-        navigate(redirectPath, { replace: true });
+        //  ONLY THIS
+        await login(data);
       } else {
         setErrorMessage("Invalid server response");
       }
     } catch (err: any) {
       console.error(err);
-      setErrorMessage(err?.response?.data?.message || "Invalid username or password");
+      setErrorMessage(
+        err?.response?.data?.message || "Invalid username or password"
+      );
     } finally {
       setLoading(false);
     }

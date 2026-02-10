@@ -26,23 +26,29 @@ api.interceptors.response.use(
 
   async (error) => {
     const originalRequest = error.config;
+    const url = originalRequest?.url || "";
 
+    // ✅ 1. IGNORE login API completely
+    if (url.includes("/Account/ValidateLogin")) {
+      return Promise.reject(error);
+    }
+
+    // ✅ 2. Handle token expiry ONLY for protected APIs
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       const refreshToken = localStorage.getItem("RefreshToken");
 
       if (!refreshToken) {
-        logoutUser();
+        logoutUser("expired");
         return Promise.reject(error);
       }
 
       try {
-        // Retry same API request with RefreshToken
         originalRequest.headers.Authorization = `Bearer ${refreshToken}`;
         return api(originalRequest);
       } catch (refreshErr) {
-        logoutUser();
+        logoutUser("expired");
         return Promise.reject(refreshErr);
       }
     }
@@ -50,6 +56,7 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 
 // export function logoutUser() {
 //   toast.error("Session expired. Please login again.");
