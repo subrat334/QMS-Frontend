@@ -47,6 +47,7 @@ interface UserDetailRow {
   Date: string | null;
   SequenceNo: number;
   Token?: string;
+  Status: "DONE" | "CANCEL"; 
 }
 
 
@@ -153,6 +154,11 @@ const handleGo = () => {
 
 
 const groupedDetailData = detailData.reduce((acc, curr) => {
+  //  FILTER BASED ON STATUS
+  if (numberStatus !== "ALL" && curr.Status !== numberStatus) {
+    return acc;
+  }
+
   const key = `${curr.UserId}-${curr.Category}-${curr.SubCategory}`;
 
   if (!acc[key]) {
@@ -1018,21 +1024,19 @@ const filteredData = data.filter((row) => {
                   ))}
                 </select>
               </td>
-            <td className="px-2 py-1">
-            {reportType === "summary" && (
-              <select
-                value={numberStatus}
-                onChange={(e) =>
-                  setNumberStatus(e.target.value as "ALL" | "DONE" | "CANCEL")
-                }
-                className="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
-              >
-                <option value="ALL">All</option>
-                <option value="DONE">Done</option>
-                <option value="CANCEL">Cancelled</option>
-              </select>
-            )}
-          </td>
+         <td className="px-2 py-1">
+  <select
+    value={numberStatus}
+    onChange={(e) =>
+      setNumberStatus(e.target.value as "ALL" | "DONE" | "CANCEL")
+    }
+    className="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-400"
+  >
+    <option value="ALL">All</option>
+    <option value="DONE">Done</option>
+    <option value="CANCEL">Cancelled</option>
+  </select>
+</td>
 
             </tr>
           </thead>

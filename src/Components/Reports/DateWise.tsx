@@ -454,60 +454,66 @@ const handlePdfDownload = async () => {
   }
 };
 
-  const fetchReports = async (from: string, to: string) => {
-    try {
-      setLoading(true);
+const fetchReports = async (from: string, to: string) => {
+  try {
+    setLoading(true);
+    setReports([]); // clear old data first
 
-      const pageSize = 50;
-      let allData: BackendReport[] = [];
+    const pageSize = 50;
 
-      // First call
-      const firstResponse = await API.getReportByDate({
+    //  Fetch first page
+    const firstResponse = await API.getReportByDate({
+      From: from,
+      To: to,
+      PageNumber: 1,
+      PageSize: pageSize,
+    });
+
+    const firstPageData: BackendReport[] = firstResponse.data ?? [];
+
+    if (firstPageData.length === 0) {
+      setReports([]);
+      return;
+    }
+
+    //  SHOW FIRST PAGE IMMEDIATELY
+    setReports(firstPageData);
+
+    const totalRows =
+      firstPageData[0].TotalRowCount ?? firstPageData.length;
+
+    const totalPages = Math.ceil(totalRows / pageSize);
+
+    // 2️ Fetch remaining pages progressively
+    for (let page = 2; page <= totalPages; page++) {
+      const response = await API.getReportByDate({
         From: from,
         To: to,
-        PageNumber: 1,
+        PageNumber: page,
         PageSize: pageSize,
       });
 
-      const firstPageData: BackendReport[] = firstResponse.data ?? [];
+     const newData = ((response.data ?? []) as BackendReport[]).map(
+  (item: BackendReport) => {
+    const { TotalRowCount, Status, ...rest } = item;
 
-      if (firstPageData.length === 0) {
-        setReports([]);
-        return;
-      }
+    return {
+      ...rest,
+      Status: Status === "CANCEL" ? "CANCELLED" : Status,
+    };
+  }
+);
 
-      // Read TotalRowCount from first row
-      const totalRows = firstPageData[0].TotalRowCount ?? firstPageData.length;
 
-      allData = [...firstPageData];
-
-      const totalPages = Math.ceil(totalRows / pageSize);
-
-      // Remaining pages
-      for (let page = 2; page <= totalPages; page++) {
-        const response = await API.getReportByDate({
-          From: from,
-          To: to,
-          PageNumber: page,
-          PageSize: pageSize,
-        });
-
-        allData.push(...(response.data ?? []));
-      }
-
-      // Optional cleanup: remove TotalRowCount from rows
-      const cleanedData = allData.map(({ TotalRowCount, Status, ...rest }) => ({
-        ...rest,
-        Status: Status === "CANCEL" ? "CANCELLED" : Status,
-      }));
-
-      setReports(cleanedData as BackendReport[]);
-    } catch (error) {
-      console.error("Failed to fetch all reports", error);
-    } finally {
-      setLoading(false);
+      //  Append immediately
+      setReports((prev) => [...prev, ...newData]);
     }
-  };
+  } catch (error) {
+      console.error("Failed to fetch all reports", error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const HeaderFilter = ({
     label,
@@ -845,8 +851,8 @@ const handlePdfDownload = async () => {
             </tr>
           </thead>
 
-          <tbody>
-            {/* 🔹 Loading state */}
+         <tbody>
+           {/* 🔹 Loading state */}
             {loading && (
               <tr>
                 <td colSpan={15} className="text-center py-4 text-gray-500 italic">
@@ -855,65 +861,65 @@ const handlePdfDownload = async () => {
               </tr>
             )}
 
-            {/* 🔹 Data rows */}
-            {!loading &&
-              filteredReports.map((r, i) => (
-                <tr
-                  key={`${r.Token}-${i}`}
-                  className="border-b hover:bg-gray-100 text-center transition"
-                >
-                  <td className="px-3 py-2">{i + 1}</td>
+  {/* 🔹 Data rows ALWAYS render */}
+  {filteredReports.map((r, i) => (
+    <tr
+      key={`${r.Token}-${i}`}
+      className="border-b hover:bg-gray-100 text-center transition"
+    >
+      <td className="px-3 py-2">{i + 1}</td>
+      <td className="px-3 py-2">{formatDateTime(r.DateAndTime)}</td>
+      <td className="px-3 py-2 font-medium text-gray-800">{r.Token}</td>
+      <td className="px-3 py-2">{r.MobileNumber}</td>
+      <td className="px-3 py-2">{r.Category}</td>
+      <td className="px-3 py-2">{r.SubCategory}</td>
+      <td className="px-3 py-2">{displayValue(r.UserName)}</td>
+      <td className="px-3 py-2">{formatTime(r.CallTime)}</td>
+      <td className="px-3 py-2">{formatTime(r.ReceiveTime)}</td>
+      <td className="px-3 py-2">{formatTime(r.CompleteTime)}</td>
+      <td className="px-3 py-2">{formatTAT(r.TAT1)}</td>
+      <td className="px-3 py-2">{formatTAT(r.TAT2)}</td>
+      <td className="px-3 py-2">{formatTAT(r.TAT3)}</td>
+      <td className="px-3 py-2 text-left">
+        {r.Remarks?.trim()
+          ? r.Remarks
+          : r.Status === "DONE"
+          ? "Service Done"
+          : r.Status === "AUTOCLOSED"
+          ? "Token is Auto Closed"
+          : "Not Served"}
+      </td>
+      <td
+        className={`px-3 py-2 rounded-md text-sm font-medium ${
+          r.Status === "DONE"
+            ? "bg-green-100 text-green-700 border border-green-400"
+            : "bg-red-100 text-red-700 border border-red-400"
+        }`}
+      >
+        {r.Status}
+      </td>
+    </tr>
+  ))}
 
-                  <td className="px-3 py-2">{formatDateTime(r.DateAndTime)}</td>
+  {/* 🔹 Show loading indicator WITHOUT blocking rows */}
+  {loading && (
+    <tr>
+      <td colSpan={15} className="text-center py-3 text-blue-600 font-medium">
+        Loading more data...
+      </td>
+    </tr>
+  )}
 
-                  <td className="px-3 py-2 font-medium text-gray-800">
-                    {r.Token}
-                  </td>
+  {/* 🔹 Empty state */}
+  {!loading && filteredReports.length === 0 && (
+    <tr>
+      <td colSpan={15} className="text-center py-4 text-gray-500 italic">
+        No records found for selected date
+      </td>
+    </tr>
+  )}
+</tbody>
 
-                  <td className="px-3 py-2">{r.MobileNumber}</td>
-                  <td className="px-3 py-2">{r.Category}</td>
-                  <td className="px-3 py-2">{r.SubCategory}</td>
-                  <td className="px-3 py-2">{displayValue(r.UserName)}</td>
-
-                  <td className="px-3 py-2">{formatTime(r.CallTime)}</td>
-                  <td className="px-3 py-2">{formatTime(r.ReceiveTime)}</td>
-                  <td className="px-3 py-2">{formatTime(r.CompleteTime)}</td>
-
-                  <td className="px-3 py-2">{formatTAT(r.TAT1)}</td>
-                  <td className="px-3 py-2">{formatTAT(r.TAT2)}</td>
-                  <td className="px-3 py-2">{formatTAT(r.TAT3)}</td>
-
-                  <td className="px-3 py-2 text-left">
-                    {r.Remarks?.trim()
-                      ? r.Remarks
-                      : r.Status === "DONE"
-                      ? "Service Done"
-                      : r.Status === "AUTOCLOSED"
-                      ? "Token  is Auto Closed"
-                      : "Not Served"}
-                  </td>
-
-                  <td
-                    className={`px-3 py-2 rounded-md text-sm font-medium ${
-                      r.Status === "DONE"
-                        ? "bg-green-100 text-green-700 border border-green-400"
-                        : "bg-red-100 text-red-700 border border-red-400"
-                    }`}
-                  >
-                    {r.Status}
-                  </td>
-                </tr>
-              ))}
-
-            {/* 🔹 Empty state */}
-            {!loading && filteredReports.length === 0 && (
-              <tr>
-                <td colSpan={15} className="text-center py-4 text-gray-500 italic">
-                  No records found for selected date
-                </td>
-              </tr>
-            )}
-          </tbody>
         </table>
       </div>
     </div>
