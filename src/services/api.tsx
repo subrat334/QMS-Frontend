@@ -4,7 +4,7 @@ import { toast } from "react-hot-toast";
 import { API_URLS } from "../constants/AllConstants";
 
 // Create axios instance
-const CURRENT_API_URL = API_URLS.LOCAL;   // or API_URLS.DEV
+const CURRENT_API_URL = API_URLS.DEV;   // or API_URLS.DEV
 
 export const api = axios.create({
   baseURL: CURRENT_API_URL,

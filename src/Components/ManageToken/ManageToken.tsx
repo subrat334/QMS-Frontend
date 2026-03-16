@@ -64,25 +64,6 @@ const ManageTokens = () => {
 
   const counterRef = useRef(selectedCounter);
 
-//   const normalizeStatus = (status: string) => {
-//   switch (status.trim().toUpperCase()) {
-//     case "WAIT A WHILE":
-//       return "Wait a while";
-//     case "CALLING":
-//       return "CALLING";
-//     case "IN PROGRESS":
-//       return "IN PROGRESS";
-//     case "HOLD":
-//       return "HOLD";
-//     case "CANCELLED":
-//     case "CANCEL":
-//       return "Cancelled";
-//     case "DONE":
-//       return "DONE";
-//     default:
-//       return "Wait a while";
-//   }
-// };
 
   const normalizeStatus = (status: string) => {
   switch (status.trim().toUpperCase()) {
@@ -151,42 +132,7 @@ const ManageTokens = () => {
   }, [selectedCounter]);
 
   // ------------------------------------------
-  // LOAD PRIVILEGES
-  // ------------------------------------------
-  // useEffect(() => {
-  //   console.log("[USE EFFECT] Loading privileges...");
-
-  //   const loadPrivileges = async () => {
-  //     console.log("[PRIVILEGES] loadPrivileges started");
-  //     setLoadingPrivileges(true);
-
-  //     if (privileges?.categories?.length) {
-  //       console.log("[PRIVILEGES] Using privileges from context");
-  //       setCategories(privileges.categories as RawCategory[]);
-  //     } else if (user) {
-  //       console.log("[PRIVILEGES] Fetching privileges for user:", user.id);
-  //       await ensurePrivilegesForUser(user.id);
-
-  //       const stored = localStorage.getItem("UserPrivileges");
-  //       if (stored) {
-  //         try {
-  //           console.log("[PRIVILEGES] Loaded privileges from localStorage");
-  //           const p = JSON.parse(stored);
-  //           setCategories(p.categories || []);
-  //         } catch {
-  //           console.log("[PRIVILEGES] Failed parsing stored privileges");
-  //           setCategories([]);
-  //         }
-  //       }
-  //     }
-
-  //     setLoadingPrivileges(false);
-  //     console.log("[PRIVILEGES] loadPrivileges finished");
-  //   };
-
-  //   loadPrivileges();
-  // }, [user, privileges, ensurePrivilegesForUser]);
-
+ 
   useEffect(() => {
   const loadCategories = async () => {
     try {
@@ -588,20 +534,42 @@ setTokenData((prev) => {
     setShowCancelPopup(true);
   };
 
+  // const handleProcessDone = async (id: number) => {
+  //   console.log("[HANDLE DONE] ID:", id);
+
+  //   const token = tokenData.find((t) => t.id === id);
+  //   console.log("[HANDLE DONE] Found:", token);
+  //   if (!token) return;
+
+  //   await sendTokenStatusUpdate(token, "DONE");
+
+  //   setTokenData((prev) => prev.filter((t) => t.id !== id));
+  //   setCalledTokens((prev) => prev.filter((t) => t !== id));
+
+  //   console.log("[HANDLE DONE] Token removed from list");
+  // };
+
+
   const handleProcessDone = async (id: number) => {
-    console.log("[HANDLE DONE] ID:", id);
+  console.log("[HANDLE DONE] ID:", id);
 
-    const token = tokenData.find((t) => t.id === id);
-    console.log("[HANDLE DONE] Found:", token);
-    if (!token) return;
+  const token = tokenData.find((t) => t.id === id);
+  console.log("[HANDLE DONE] Found:", token);
+  if (!token) return;
 
-    await sendTokenStatusUpdate(token, "DONE");
+  //  NEW VALIDATION
+  if (token.status !== "IN PROGRESS") {
+    alert("You must Start the token before marking it as Done.");
+    return;
+  }
 
-    setTokenData((prev) => prev.filter((t) => t.id !== id));
-    setCalledTokens((prev) => prev.filter((t) => t !== id));
+  await sendTokenStatusUpdate(token, "DONE");
 
-    console.log("[HANDLE DONE] Token removed from list");
-  };
+  setTokenData((prev) => prev.filter((t) => t.id !== id));
+  setCalledTokens((prev) => prev.filter((t) => t !== id));
+
+  console.log("[HANDLE DONE] Token removed from list");
+};
 
   const clearFilters = () => {
     console.log("[CLEAR FILTERS] Resetting all filters");
@@ -614,9 +582,7 @@ setTokenData((prev) => {
   const canShowTable =
     selectedCategory && selectedSubcategory && selectedCounter;
 
-//     const isAnotherTokenActive = tokenData.some(
-//   t => t.status === "CALLING" || t.status === "IN PROGRESS"
-// );
+
   // ------------------------------------------
   // UI
   // ------------------------------------------
@@ -752,7 +718,7 @@ setTokenData((prev) => {
                           )}
 
                           {/* HOLD */}
-                          {token.status === "HOLD" && (
+                          {/* {token.status === "HOLD" && (
                             <div className="flex gap-2">
                               <button
                                 className="bg-purple-600 text-white px-3 py-1 rounded"
@@ -775,7 +741,31 @@ setTokenData((prev) => {
                                 Done
                               </button>
                             </div>
-                          )}
+                          )} */}
+                          {token.status === "HOLD" && (
+                              <div className="flex gap-2">
+                                <button
+                                  className="bg-purple-600 text-white px-3 py-1 rounded"
+                                  onClick={() => handleRecall(token.id)}
+                                >
+                                  RE-Call
+                                </button>
+
+                                <button
+                                  className="bg-red-600 text-white px-3 py-1 rounded"
+                                  onClick={() => handleCancelClick(token)}
+                                >
+                                  Cancel
+                                </button>
+
+                                <button
+                                  disabled
+                                  className="bg-gray-400 cursor-not-allowed text-white px-3 py-1 rounded"
+                                >
+                                  Done
+                                </button>
+                              </div>
+                            )}
 
                             {/* CALLING */}
                             {token.status === "CALLING" && (
@@ -801,12 +791,11 @@ setTokenData((prev) => {
                                   Cancel
                                 </button>
 
-                                <button
-                                  className="bg-green-600 text-white px-3 py-1 rounded"
-                                  onClick={() => handleProcessDone(token.id)}
-                                >
-                                  Done
-                                </button>
+                         <button
+                          disabled
+                          className="bg-gray-400 cursor-not-allowed text-white px-3 py-1 rounded">
+                          Done
+                        </button>
                               </div>
                             )}
 
@@ -833,13 +822,13 @@ setTokenData((prev) => {
     >
       Cancel
     </button>
+       <button
+                          disabled
+                          className="bg-gray-400 cursor-not-allowed text-white px-3 py-1 rounded">
+                          Done
+                        </button>
 
-    <button
-      className="bg-green-600 text-white px-3 py-1 rounded"
-      onClick={() => handleProcessDone(token.id)}
-    >
-      Done
-    </button>
+   
   </div>
 )}
 
