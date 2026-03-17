@@ -106,7 +106,7 @@ const ManageTokens = () => {
         // CounterId: selectedToken.CounterId,
         CounterId: Number(selectedCounter),
         Token: selectedToken.Token,
-        StatusId: 4, // Assuming 4 = Cancelled
+        StatusId: 4, 
         Remarks: cancelRemarks
       });
 
@@ -272,7 +272,7 @@ useEffect(() => {
   }
 
   console.log("[SIGNALR] Creating hub connection...");
- const CURRENT_SIGNALR_URL = SIGNALR_URLS.LOCAL;   // or SIGNALR_URLS.LIVE
+ const CURRENT_SIGNALR_URL = SIGNALR_URLS.DEV;   // or SIGNALR_URLS.LIVE
 
   const connection = ($ as any).hubConnection(
   CURRENT_SIGNALR_URL,
@@ -430,37 +430,24 @@ setTokenData((prev) => {
   // ------------------------------------------
   // BUTTON HANDLERS
   // ------------------------------------------
-  const handleCallPatient = async (id: number) => {
-    console.log("[HANDLE CALL] Triggered for ID:", id);
-  //  Check if another token is already CALLING
-  const alreadyCalling = tokenData.some(
-    (t) => t.status === "CALLING" && t.id !== id
-  );
+ const handleCallPatient = async (id: number) => {
+  console.log("[HANDLE CALL] Triggered for ID:", id);
 
-  if (alreadyCalling) {
-    alert(
-      "A token is already in CALLING state. Please Hold or Cancel it before calling another token."
-    );
-    return;
-  }
+  const token = tokenData.find((t) => t.id === id);
+  if (!token) return;
 
-    const token = tokenData.find((t) => t.id === id);
-    if (!token) return;
-
-  // Send CALL status to backend
   await sendTokenStatusUpdate(token, "CALL");
 
-  // Optimistic UI update
   setTokenData((prev) =>
     prev.map((t) =>
       t.id === id ? { ...t, status: "CALLING" } : t
     )
   );
 
-    if (!calledTokens.includes(id)) {
-      setCalledTokens((prev) => [...prev, id]);
-    }
-  };
+  if (!calledTokens.includes(id)) {
+    setCalledTokens((prev) => [...prev, id]);
+  }
+};
 
 
       const handleStart = async (id: number) => {
@@ -861,20 +848,14 @@ setTokenData((prev) => {
                           )}
 
                             {/* PENDING */}
-                        
-                         {token.status === "Wait a while" && (
-                          <button
-                            onClick={() => handleCallPatient(token.id)}
-                            disabled={tokenData.some(t => t.status === "CALLING" || t.status === "IN PROGRESS")}
-                            className={`px-3 py-1 rounded ${
-                              tokenData.some(t => t.status === "CALLING" || t.status === "IN PROGRESS")
-                                ? "bg-gray-400 cursor-not-allowed"
-                                : "bg-green-700 text-white"
-                            }`}
-                          >
-                            Call
-                          </button>
-                        )}
+                            {token.status === "Wait a while" && (
+                              <button
+                                onClick={() => handleCallPatient(token.id)}
+                                className="bg-green-700 text-white px-3 py-1 rounded"
+                              >
+                                Call
+                              </button>
+                            )}
 
                         </td>
                       </tr>

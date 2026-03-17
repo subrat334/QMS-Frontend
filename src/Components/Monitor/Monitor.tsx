@@ -41,52 +41,6 @@ const Monitor: React.FC<MonitorProps> = ({ fullScreen, setFullScreen }) => {
   const MAX_ROWS_FULLSCREEN = 20;
 
 
-  /* ✅ LOAD CATEGORIES FROM LOCAL STORAGE */
-  // useEffect(() => {
-  //   const loadCategories = () => {
-  //     const stored = localStorage.getItem("UserPrivileges");
-
-  //     if (!stored) {
-  //       setCategoryData({});
-  //       setLoadingCategories(false);
-  //       return;
-  //     }
-
-  //     const parsed = JSON.parse(stored);
-
-  //     const mapped: CategoryData = parsed.categories?.reduce(
-  //       (acc: CategoryData, cat: any) => {
-  //         acc[cat.CategoryName] = {
-  //           categoryId: Number(cat.CategoryId),
-  //           subCategories:
-  //             cat.SubCategories?.map((s: any) => ({
-  //               name: s.SubCategoryName,
-  //               subCategoryId: Number(s.SubCategoryId),
-  //             })) || [],
-  //         };
-  //         return acc;
-  //       },
-  //       {}
-  //     );
-
-  //     setCategoryData(mapped || {});
-  //     setLoadingCategories(false);
-  //   };
-
-  //   // ✅ Load immediately
-  //   loadCategories();
-
-  //   // ✅ Poll every 500ms until data appears
-  //   const interval = setInterval(() => {
-  //     const stored = localStorage.getItem("UserPrivileges");
-  //     if (stored) {
-  //       loadCategories();
-  //       clearInterval(interval); // Stop polling once loaded
-  //     }
-  //   }, 500);
-
-  //   return () => clearInterval(interval);
-  // }, []);
 
     /* ✅ LOAD CATEGORIES FROM API (NOT LOCAL STORAGE) */
   useEffect(() => {
@@ -270,14 +224,15 @@ const renderTable = (subcategory: string, isFullScreen = false) => {
             <tbody>
               {displayTokens.map((token, i) => {
                 const rowBg =
-                  token.message === "INPROGRESS"
-                    ? "bg-green-200"
-                    : token.message === "CALLING"
-                    ? "bg-yellow-200"
-                    : token.message === "NEXT"
-                    ? "bg-blue-200"
-                    : "bg-pink-200";
-
+              token.message === "INPROGRESS"
+                ? "bg-green-200"
+                : token.message === "CALLING"
+                ? "bg-yellow-200"
+                : token.message === "NEXT"
+                ? "bg-blue-200"
+                : token.message === "RE-CALL"
+                ? "bg-orange-300"
+                : "bg-pink-200";
                 return (
                   <tr
                     key={i}

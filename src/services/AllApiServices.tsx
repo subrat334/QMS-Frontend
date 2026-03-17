@@ -217,7 +217,7 @@ getDisplayScreenByCategoryAndSubCategory: (
 // NEW STATUS UPDATE API
 // -------------------------------------------------------
 updateTokenStatus: (data: {
-   TokenQueueId: number; // ✅ NEW
+   TokenQueueId: number; //  NEW
   CategoryId: number;
   SubCategoryId: number;
   CounterId: number;
